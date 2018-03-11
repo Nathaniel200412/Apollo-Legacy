@@ -13,25 +13,25 @@ Apollo is a Minecraft: PE Server Software with an improved Generator and a lot m
 ## Information
 
 - Need to communicate with us? Join our [discord](https://discord.gg/xBN3WR6) group!
-- we have a web site [Apollope.ml](https://apollope.ml)
-- We are a edited version of PmmP. We have edited their generators to our version and have improved the performance
+- We have a web site: [apollope.ml](https://apollope.ml)
+- We are a edited version of PMMP. We have edited their generators to our version and have improved the performance.
 - You can download .phar from Circle CI. Tab to latest build,tap to artifacts selection, tap to DevTools and download Apollo1.0dev.phar
 
-## Cradits 
+## Credits 
 
 - DaPorkchop (DaMatrix)
 
-- pmmp
+- PMMP
 
-- all other poeple
+- All other poeple
  
 ## TODO :
 
-- recreate all banners @nikoskon2003
-- improve and add all feature of 1.2
-- redstone
-- mob ai
-- fix any bugs that are left
+- Recreate all banners @nikoskon2003
+- Improve and add all feature of 1.2
+- Redstone
+- Mob AI
+- Fix any bugs that are left
 
  If you have epic ideas, create an issue and tell us the idea!
 
