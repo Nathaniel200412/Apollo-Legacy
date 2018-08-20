@@ -6,9 +6,10 @@ php:
 before_script:
 # - pecl install channel://pecl.php.net/pthreads-3.1.6
  - echo | pecl install channel://pecl.php.net/yaml-2.0.2
- - git clone https://github.com/krakjoe/pthreads.git
+ - pecl install channel://pecl.php.net/crypto-0.3.1
+ - git clone https://github.com/pmmp/pthreads.git
  - cd pthreads
- - git checkout 6c6b15138c923b69cfa46ee05fc2dd45da587287
+ - git checkout c8cfacda84f21032d6014b53e72bf345ac901dac
  - phpize
  - ./configure
  - make
@@ -18,7 +19,7 @@ before_script:
  - composer install
 
 script:
- - ./tests/travis.sh
+ - ./tests/travis.sh -t4
 
 notifications:
  email: false

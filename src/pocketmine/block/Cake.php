@@ -27,7 +27,6 @@ use pocketmine\entity\EffectInstance;
 use pocketmine\entity\Living;
 use pocketmine\item\FoodSource;
 use pocketmine\item\Item;
-use pocketmine\level\Level;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Vector3;
 use pocketmine\Player;
@@ -49,16 +48,15 @@ class Cake extends Transparent implements FoodSource{
 	}
 
 	protected function recalculateBoundingBox() : ?AxisAlignedBB{
-
 		$f = $this->getDamage() * 0.125; //1 slice width
 
 		return new AxisAlignedBB(
-			$this->x + 0.0625 + $f,
-			$this->y,
-			$this->z + 0.0625,
-			$this->x + 1 - 0.0625,
-			$this->y + 0.5,
-			$this->z + 1 - 0.0625
+			0.0625 + $f,
+			0,
+			0.0625,
+			1 - 0.0625,
+			0.5,
+			1 - 0.0625
 		);
 	}
 
@@ -73,16 +71,10 @@ class Cake extends Transparent implements FoodSource{
 		return false;
 	}
 
-	public function onUpdate(int $type){
-		if($type === Level::BLOCK_UPDATE_NORMAL){
-			if($this->getSide(Vector3::SIDE_DOWN)->getId() === self::AIR){ //Replace with common break method
-				$this->getLevel()->setBlock($this, BlockFactory::get(Block::AIR), true);
-
-				return Level::BLOCK_UPDATE_NORMAL;
-			}
+	public function onNearbyBlockChange() : void{
+		if($this->getSide(Vector3::SIDE_DOWN)->getId() === self::AIR){ //Replace with common break method
+			$this->getLevel()->setBlock($this, BlockFactory::get(Block::AIR), true);
 		}
-
-		return false;
 	}
 
 	public function getDropsForCompatibleTool(Item $item) : array{

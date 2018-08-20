@@ -30,6 +30,9 @@ abstract class Thread extends \Thread{
 
 	/** @var \ClassLoader */
 	protected $classLoader;
+	/** @var string|null */
+	protected $composerAutoloaderPath;
+
 	protected $isKilled = false;
 
 	public function getClassLoader(){
@@ -37,6 +40,8 @@ abstract class Thread extends \Thread{
 	}
 
 	public function setClassLoader(\ClassLoader $loader = null){
+		$this->composerAutoloaderPath = \pocketmine\COMPOSER_AUTOLOADER_PATH;
+
 		if($loader === null){
 			$loader = Server::getInstance()->getLoader();
 		}
@@ -51,7 +56,9 @@ abstract class Thread extends \Thread{
 	 * (unless you are using a custom autoloader).
 	 */
 	public function registerClassLoader(){
-		require(\pocketmine\PATH . "vendor/autoload.php");
+		if($this->composerAutoloaderPath !== null){
+			require $this->composerAutoloaderPath;
+		}
 		if($this->classLoader !== null){
 			$this->classLoader->register(false);
 		}
@@ -60,14 +67,10 @@ abstract class Thread extends \Thread{
 	public function start(?int $options = \PTHREADS_INHERIT_ALL){
 		ThreadManager::getInstance()->add($this);
 
-		if(!$this->isRunning() and !$this->isJoined() and !$this->isTerminated()){
-			if($this->getClassLoader() === null){
-				$this->setClassLoader();
-			}
-			return parent::start($options);
+		if($this->getClassLoader() === null){
+			$this->setClassLoader();
 		}
-
-		return false;
+		return parent::start($options);
 	}
 
 	/**
@@ -76,12 +79,9 @@ abstract class Thread extends \Thread{
 	public function quit(){
 		$this->isKilled = true;
 
-		$this->notify();
-
 		if(!$this->isJoined()){
-			if(!$this->isTerminated()){
-				$this->join();
-			}
+			$this->notify();
+			$this->join();
 		}
 
 		ThreadManager::getInstance()->remove($this);

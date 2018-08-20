@@ -25,7 +25,6 @@ namespace pocketmine\block;
 
 use pocketmine\item\Item;
 use pocketmine\item\ItemFactory;
-use pocketmine\level\Level;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Vector3;
 
@@ -49,44 +48,32 @@ class Farmland extends Transparent{
 		return BlockToolType::TYPE_SHOVEL;
 	}
 
+	protected function recalculateBoundingBox() : ?AxisAlignedBB{
+		return new AxisAlignedBB(0, 0, 0, 1, 1, 1); //TODO: y max should be 0.9375, but MCPE currently treats them as a full block (https://bugs.mojang.com/browse/MCPE-12109)
+	}
+
+	public function onNearbyBlockChange() : void{
+		if($this->getSide(Vector3::SIDE_UP)->isSolid()){
+			$this->level->setBlock($this, BlockFactory::get(Block::DIRT), true);
+		}
+	}
+
 	public function ticksRandomly() : bool{
 		return true;
 	}
 
-	protected function recalculateBoundingBox() : ?AxisAlignedBB{
-		return new AxisAlignedBB(
-			$this->x,
-			$this->y,
-			$this->z,
-			$this->x + 1,
-			$this->y + 1, //TODO: this should be 0.9375, but MCPE currently treats them as a full block (https://bugs.mojang.com/browse/MCPE-12109)
-			$this->z + 1
-		);
-	}
-
-	public function onUpdate(int $type){
-		if($type === Level::BLOCK_UPDATE_NORMAL and $this->getSide(Vector3::SIDE_UP)->isSolid()){
-			$this->level->setBlock($this, BlockFactory::get(Block::DIRT), true);
-			return $type;
-		}elseif($type === Level::BLOCK_UPDATE_RANDOM){
-			if(!$this->canHydrate()){
-				if($this->meta > 0){
-					$this->meta--;
-					$this->level->setBlock($this, $this, false, false);
-				}else{
-					$this->level->setBlock($this, BlockFactory::get(Block::DIRT), false, true);
-				}
-
-				return $type;
-			}elseif($this->meta < 7){
-				$this->meta = 7;
+	public function onRandomTick() : void{
+		if(!$this->canHydrate()){
+			if($this->meta > 0){
+				$this->meta--;
 				$this->level->setBlock($this, $this, false, false);
-
-				return $type;
+			}else{
+				$this->level->setBlock($this, BlockFactory::get(Block::DIRT), false, true);
 			}
+		}elseif($this->meta < 7){
+			$this->meta = 7;
+			$this->level->setBlock($this, $this, false, false);
 		}
-
-		return false;
 	}
 
 	protected function canHydrate() : bool{

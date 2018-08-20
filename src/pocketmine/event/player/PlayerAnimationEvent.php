@@ -30,8 +30,6 @@ use pocketmine\Player;
  * Called when a player does an animation
  */
 class PlayerAnimationEvent extends PlayerEvent implements Cancellable{
-	public static $handlerList = null;
-
 	/** @var int */
 	private $animationType;
 
@@ -50,5 +48,4 @@ class PlayerAnimationEvent extends PlayerEvent implements Cancellable{
 	public function getAnimationType() : int{
 		return $this->animationType;
 	}
-
 }

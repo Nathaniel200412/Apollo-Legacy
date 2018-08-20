@@ -33,7 +33,6 @@ use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\ProjectileHitBlockEvent;
 use pocketmine\event\entity\ProjectileHitEntityEvent;
 use pocketmine\event\entity\ProjectileHitEvent;
-use pocketmine\event\Timings;
 use pocketmine\level\Level;
 use pocketmine\math\RayTraceResult;
 use pocketmine\math\Vector3;
@@ -41,12 +40,14 @@ use pocketmine\math\VoxelRayTrace;
 use pocketmine\nbt\tag\ByteTag;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\IntTag;
+use pocketmine\timings\Timings;
 
 abstract class Projectile extends Entity{
 
 	public const DATA_SHOOTER_ID = 17;
 
-	protected $damage = 0;
+	/** @var float */
+	protected $damage = 0.0;
 
 	/** @var Vector3|null */
 	protected $blockHit;
@@ -55,45 +56,46 @@ abstract class Projectile extends Entity{
 	/** @var int|null */
 	protected $blockHitData;
 
-	public function __construct(Level $level, CompoundTag $nbt, Entity $shootingEntity = null){
+	public function __construct(Level $level, CompoundTag $nbt, ?Entity $shootingEntity = null){
 		parent::__construct($level, $nbt);
 		if($shootingEntity !== null){
 			$this->setOwningEntity($shootingEntity);
 		}
 	}
 
-	public function attack(EntityDamageEvent $source){
+	public function attack(EntityDamageEvent $source) : void{
 		if($source->getCause() === EntityDamageEvent::CAUSE_VOID){
 			parent::attack($source);
 		}
 	}
 
-	protected function initEntity(){
-		parent::initEntity();
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
 
 		$this->setMaxHealth(1);
 		$this->setHealth(1);
-		$this->age = $this->namedtag->getShort("Age", $this->age);
+		$this->age = $nbt->getShort("Age", $this->age);
+		$this->damage = $nbt->getDouble("damage", $this->damage);
 
 		do{
 			$blockHit = null;
 			$blockId = null;
 			$blockData = null;
 
-			if($this->namedtag->hasTag("tileX", IntTag::class) and $this->namedtag->hasTag("tileY", IntTag::class) and $this->namedtag->hasTag("tileZ", IntTag::class)){
-				$blockHit = new Vector3($this->namedtag->getInt("tileX"), $this->namedtag->getInt("tileY"), $this->namedtag->getInt("tileZ"));
+			if($nbt->hasTag("tileX", IntTag::class) and $nbt->hasTag("tileY", IntTag::class) and $nbt->hasTag("tileZ", IntTag::class)){
+				$blockHit = new Vector3($nbt->getInt("tileX"), $nbt->getInt("tileY"), $nbt->getInt("tileZ"));
 			}else{
 				break;
 			}
 
-			if($this->namedtag->hasTag("blockId", IntTag::class)){
-				$blockId = $this->namedtag->getInt("blockId");
+			if($nbt->hasTag("blockId", IntTag::class)){
+				$blockId = $nbt->getInt("blockId");
 			}else{
 				break;
 			}
 
-			if($this->namedtag->hasTag("blockData", ByteTag::class)){
-				$blockData = $this->namedtag->getByte("blockData");
+			if($nbt->hasTag("blockData", ByteTag::class)){
+				$blockData = $nbt->getByte("blockData");
 			}else{
 				break;
 			}
@@ -113,53 +115,77 @@ abstract class Projectile extends Entity{
 	}
 
 	/**
+	 * Returns the base damage applied on collision. This is multiplied by the projectile's speed to give a result
+	 * damage.
+	 *
+	 * @return float
+	 */
+	public function getBaseDamage() : float{
+		return $this->damage;
+	}
+
+	/**
+	 * Sets the base amount of damage applied by the projectile.
+	 *
+	 * @param float $damage
+	 */
+	public function setBaseDamage(float $damage) : void{
+		$this->damage = $damage;
+	}
+
+	/**
 	 * Returns the amount of damage this projectile will deal to the entity it hits.
 	 * @return int
 	 */
 	public function getResultDamage() : int{
-		return (int) ceil(sqrt($this->motionX ** 2 + $this->motionY ** 2 + $this->motionZ ** 2) * $this->damage);
+		return (int) ceil($this->motion->length() * $this->damage);
 	}
 
-	public function saveNBT(){
-		parent::saveNBT();
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT();
 
-		$this->namedtag->setShort("Age", $this->age);
+		$nbt->setShort("Age", $this->age);
+		$nbt->setDouble("damage", $this->damage);
 
 		if($this->blockHit !== null){
-			$this->namedtag->setInt("tileX", $this->blockHit->x);
-			$this->namedtag->setInt("tileY", $this->blockHit->y);
-			$this->namedtag->setInt("tileZ", $this->blockHit->z);
+			$nbt->setInt("tileX", $this->blockHit->x);
+			$nbt->setInt("tileY", $this->blockHit->y);
+			$nbt->setInt("tileZ", $this->blockHit->z);
 
 			//we intentionally use different ones to PC because we don't have stringy IDs
-			$this->namedtag->setInt("blockId", $this->blockHitId);
-			$this->namedtag->setByte("blockData", $this->blockHitData);
+			$nbt->setInt("blockId", $this->blockHitId);
+			$nbt->setByte("blockData", $this->blockHitData);
 		}
+
+		return $nbt;
 	}
 
 	protected function applyDragBeforeGravity() : bool{
 		return true;
 	}
 
-	public function hasMovementUpdate() : bool{
-		$parent = parent::hasMovementUpdate();
-		if($parent and $this->blockHit !== null){
+	public function onNearbyBlockChange() : void{
+		if($this->blockHit !== null){
 			$blockIn = $this->level->getBlockAt($this->blockHit->x, $this->blockHit->y, $this->blockHit->z);
-
-			if($blockIn->getId() === $this->blockHitId and $blockIn->getDamage() === $this->blockHitData){
-				return false;
+			if($blockIn->getId() !== $this->blockHitId or $blockIn->getDamage() !== $this->blockHitData){
+				$this->blockHit = $this->blockHitId = $this->blockHitData = null;
 			}
 		}
 
-		return $parent;
+		parent::onNearbyBlockChange();
 	}
 
-	public function move(float $dx, float $dy, float $dz) : bool{
+	public function hasMovementUpdate() : bool{
+		return $this->blockHit === null and parent::hasMovementUpdate();
+	}
+
+	public function move(float $dx, float $dy, float $dz) : void{
 		$this->blocksAround = null;
 
 		Timings::$entityMoveTimer->startTiming();
 
 		$start = $this->asVector3();
-		$end = $start->add($this->motionX, $this->motionY, $this->motionZ);
+		$end = $start->add($this->motion);
 
 		$blockHit = null;
 		$entityHit = null;
@@ -185,7 +211,7 @@ abstract class Projectile extends Entity{
 				continue;
 			}
 
-			$entityBB = $entity->boundingBox->grow(0.3, 0.3, 0.3);
+			$entityBB = $entity->boundingBox->expandedCopy(0.3, 0.3, 0.3);
 			$entityHitResult = $entityBB->calculateIntercept($start, $end);
 
 			if($entityHitResult === null){
@@ -215,7 +241,7 @@ abstract class Projectile extends Entity{
 			}elseif($blockHit !== null){
 				$ev = new ProjectileHitBlockEvent($this, $hitResult, $blockHit);
 			}else{
-				\assert(false, "unknown hit type");
+				assert(false, "unknown hit type");
 			}
 
 			if($ev !== null){
@@ -230,15 +256,15 @@ abstract class Projectile extends Entity{
 			}
 
 			$this->isCollided = $this->onGround = true;
-			$this->motionX = $this->motionY = $this->motionZ = 0;
+			$this->motion->x = $this->motion->y = $this->motion->z = 0;
 		}else{
 			$this->isCollided = $this->onGround = false;
 			$this->blockHit = $this->blockHitId = $this->blockHitData = null;
 
 			//recompute angles...
-			$f = sqrt(($this->motionX ** 2) + ($this->motionZ ** 2));
-			$this->yaw = (atan2($this->motionX, $this->motionZ) * 180 / M_PI);
-			$this->pitch = (atan2($this->motionY, $f) * 180 / M_PI);
+			$f = sqrt(($this->motion->x ** 2) + ($this->motion->z ** 2));
+			$this->yaw = (atan2($this->motion->x, $this->motion->z) * 180 / M_PI);
+			$this->pitch = (atan2($this->motion->y, $f) * 180 / M_PI);
 		}
 
 		$this->checkChunks();
@@ -246,8 +272,6 @@ abstract class Projectile extends Entity{
 
 
 		Timings::$entityMoveTimer->stopTiming();
-
-		return true;
 	}
 
 	/**

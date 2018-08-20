@@ -1,11 +1,17 @@
 players/*
 worlds/*
+plugin_data/*
+plugins/*
 bin*/*
 timings/*
 crashdumps/*
 *.log
 *.txt
-memoryDump_*/*
+*.phar
+server.properties
+/pocketmine.yml
+memory_dumps/*
+resource_packs/
 
 # Common IDEs
 .idea/
@@ -33,9 +39,3 @@ test_data/*
 
 # Doxygen
 Documentation/*
-
-\.buildpath
-
-\.project
-
-\.settings/

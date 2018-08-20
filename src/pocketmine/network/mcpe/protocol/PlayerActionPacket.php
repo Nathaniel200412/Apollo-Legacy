@@ -26,7 +26,7 @@ namespace pocketmine\network\mcpe\protocol;
 #include <rules/DataPacket.h>
 
 
-use pocketmine\network\mcpe\NetworkSession;
+use pocketmine\network\mcpe\handler\SessionHandler;
 
 class PlayerActionPacket extends DataPacket{
 	public const NETWORK_ID = ProtocolInfo::PLAYER_ACTION_PACKET;
@@ -52,6 +52,10 @@ class PlayerActionPacket extends DataPacket{
 	public const ACTION_CONTINUE_BREAK = 18;
 
 	public const ACTION_SET_ENCHANTMENT_SEED = 20;
+	public const ACTION_START_SWIMMING = 21;
+	public const ACTION_STOP_SWIMMING = 22;
+	public const ACTION_START_SPIN_ATTACK = 23;
+	public const ACTION_STOP_SPIN_ATTACK = 24;
 
 	/** @var int */
 	public $entityRuntimeId;
@@ -66,22 +70,21 @@ class PlayerActionPacket extends DataPacket{
 	/** @var int */
 	public $face;
 
-	protected function decodePayload(){
+	protected function decodePayload() : void{
 		$this->entityRuntimeId = $this->getEntityRuntimeId();
 		$this->action = $this->getVarInt();
 		$this->getBlockPosition($this->x, $this->y, $this->z);
 		$this->face = $this->getVarInt();
 	}
 
-	protected function encodePayload(){
+	protected function encodePayload() : void{
 		$this->putEntityRuntimeId($this->entityRuntimeId);
 		$this->putVarInt($this->action);
 		$this->putBlockPosition($this->x, $this->y, $this->z);
 		$this->putVarInt($this->face);
 	}
 
-	public function handle(NetworkSession $session) : bool{
-		return $session->handlePlayerAction($this);
+	public function handle(SessionHandler $handler) : bool{
+		return $handler->handlePlayerAction($this);
 	}
-
 }

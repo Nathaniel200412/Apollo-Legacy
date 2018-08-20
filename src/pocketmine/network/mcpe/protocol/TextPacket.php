@@ -26,7 +26,7 @@ namespace pocketmine\network\mcpe\protocol;
 #include <rules/DataPacket.h>
 
 
-use pocketmine\network\mcpe\NetworkSession;
+use pocketmine\network\mcpe\handler\SessionHandler;
 
 class TextPacket extends DataPacket{
 	public const NETWORK_ID = ProtocolInfo::TEXT_PACKET;
@@ -46,15 +46,21 @@ class TextPacket extends DataPacket{
 	/** @var bool */
 	public $needsTranslation = false;
 	/** @var string */
-	public $source;
+	public $sourceName;
+	/** @var string */
+	public $sourceThirdPartyName = "";
+	/** @var int */
+	public $sourcePlatform = 0;
 	/** @var string */
 	public $message;
 	/** @var string[] */
 	public $parameters = [];
 	/** @var string */
 	public $xboxUserId = "";
+	/** @var string */
+	public $platformChatId = "";
 
-	protected function decodePayload(){
+	protected function decodePayload() : void{
 		$this->type = $this->getByte();
 		$this->needsTranslation = $this->getBool();
 		switch($this->type){
@@ -62,7 +68,9 @@ class TextPacket extends DataPacket{
 			case self::TYPE_WHISPER:
 			/** @noinspection PhpMissingBreakStatementInspection */
 			case self::TYPE_ANNOUNCEMENT:
-				$this->source = $this->getString();
+				$this->sourceName = $this->getString();
+				$this->sourceThirdPartyName = $this->getString();
+				$this->sourcePlatform = $this->getVarInt();
 			case self::TYPE_RAW:
 			case self::TYPE_TIP:
 			case self::TYPE_SYSTEM:
@@ -81,9 +89,10 @@ class TextPacket extends DataPacket{
 		}
 
 		$this->xboxUserId = $this->getString();
+		$this->platformChatId = $this->getString();
 	}
 
-	protected function encodePayload(){
+	protected function encodePayload() : void{
 		$this->putByte($this->type);
 		$this->putBool($this->needsTranslation);
 		switch($this->type){
@@ -91,7 +100,9 @@ class TextPacket extends DataPacket{
 			case self::TYPE_WHISPER:
 			/** @noinspection PhpMissingBreakStatementInspection */
 			case self::TYPE_ANNOUNCEMENT:
-				$this->putString($this->source);
+				$this->putString($this->sourceName);
+				$this->putString($this->sourceThirdPartyName);
+				$this->putVarInt($this->sourcePlatform);
 			case self::TYPE_RAW:
 			case self::TYPE_TIP:
 			case self::TYPE_SYSTEM:
@@ -110,10 +121,10 @@ class TextPacket extends DataPacket{
 		}
 
 		$this->putString($this->xboxUserId);
+		$this->putString($this->platformChatId);
 	}
 
-	public function handle(NetworkSession $session) : bool{
-		return $session->handleText($this);
+	public function handle(SessionHandler $handler) : bool{
+		return $handler->handleText($this);
 	}
-
 }

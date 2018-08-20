@@ -27,7 +27,7 @@ namespace pocketmine\network\mcpe\protocol;
 
 use pocketmine\item\Item;
 use pocketmine\math\Vector3;
-use pocketmine\network\mcpe\NetworkSession;
+use pocketmine\network\mcpe\handler\SessionHandler;
 use pocketmine\network\mcpe\protocol\types\EntityLink;
 use pocketmine\utils\UUID;
 
@@ -38,10 +38,16 @@ class AddPlayerPacket extends DataPacket{
 	public $uuid;
 	/** @var string */
 	public $username;
+	/** @var string */
+	public $thirdPartyName = "";
+	/** @var int */
+	public $platform = 0;
 	/** @var int|null */
 	public $entityUniqueId = null; //TODO
 	/** @var int */
 	public $entityRuntimeId;
+	/** @var string */
+	public $platformChatId = "";
 	/** @var Vector3 */
 	public $position;
 	/** @var Vector3|null */
@@ -69,11 +75,14 @@ class AddPlayerPacket extends DataPacket{
 	/** @var EntityLink[] */
 	public $links = [];
 
-	protected function decodePayload(){
+	protected function decodePayload() : void{
 		$this->uuid = $this->getUUID();
 		$this->username = $this->getString();
+		$this->thirdPartyName = $this->getString();
+		$this->platform = $this->getVarInt();
 		$this->entityUniqueId = $this->getEntityUniqueId();
 		$this->entityRuntimeId = $this->getEntityRuntimeId();
+		$this->platformChatId = $this->getString();
 		$this->position = $this->getVector3();
 		$this->motion = $this->getVector3();
 		$this->pitch = $this->getLFloat();
@@ -96,11 +105,14 @@ class AddPlayerPacket extends DataPacket{
 		}
 	}
 
-	protected function encodePayload(){
+	protected function encodePayload() : void{
 		$this->putUUID($this->uuid);
 		$this->putString($this->username);
+		$this->putString($this->thirdPartyName);
+		$this->putVarInt($this->platform);
 		$this->putEntityUniqueId($this->entityUniqueId ?? $this->entityRuntimeId);
 		$this->putEntityRuntimeId($this->entityRuntimeId);
+		$this->putString($this->platformChatId);
 		$this->putVector3($this->position);
 		$this->putVector3Nullable($this->motion);
 		$this->putLFloat($this->pitch);
@@ -123,8 +135,7 @@ class AddPlayerPacket extends DataPacket{
 		}
 	}
 
-	public function handle(NetworkSession $session) : bool{
-		return $session->handleAddPlayer($this);
+	public function handle(SessionHandler $handler) : bool{
+		return $handler->handleAddPlayer($this);
 	}
-
 }

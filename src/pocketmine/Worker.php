@@ -30,6 +30,8 @@ abstract class Worker extends \Worker{
 
 	/** @var \ClassLoader */
 	protected $classLoader;
+	/** @var string|null */
+	protected $composerAutoloaderPath;
 
 	protected $isKilled = false;
 
@@ -38,6 +40,8 @@ abstract class Worker extends \Worker{
 	}
 
 	public function setClassLoader(\ClassLoader $loader = null){
+		$this->composerAutoloaderPath = \pocketmine\COMPOSER_AUTOLOADER_PATH;
+
 		if($loader === null){
 			$loader = Server::getInstance()->getLoader();
 		}
@@ -52,7 +56,9 @@ abstract class Worker extends \Worker{
 	 * (unless you are using a custom autoloader).
 	 */
 	public function registerClassLoader(){
-		require(\pocketmine\PATH . "vendor/autoload.php");
+		if($this->composerAutoloaderPath !== null){
+			require $this->composerAutoloaderPath;
+		}
 		if($this->classLoader !== null){
 			$this->classLoader->register(false);
 		}
@@ -61,14 +67,10 @@ abstract class Worker extends \Worker{
 	public function start(?int $options = \PTHREADS_INHERIT_ALL){
 		ThreadManager::getInstance()->add($this);
 
-		if(!$this->isRunning() and !$this->isJoined() and !$this->isTerminated()){
-			if($this->getClassLoader() === null){
-				$this->setClassLoader();
-			}
-			return parent::start($options);
+		if($this->getClassLoader() === null){
+			$this->setClassLoader();
 		}
-
-		return false;
+		return parent::start($options);
 	}
 
 	/**
@@ -77,16 +79,10 @@ abstract class Worker extends \Worker{
 	public function quit(){
 		$this->isKilled = true;
 
-		$this->notify();
-
 		if($this->isRunning()){
-			$this->shutdown();
+			while($this->unstack() !== null);
 			$this->notify();
-			$this->unstack();
-		}elseif(!$this->isJoined()){
-			if(!$this->isTerminated()){
-				$this->join();
-			}
+			$this->shutdown();
 		}
 
 		ThreadManager::getInstance()->remove($this);

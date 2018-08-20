@@ -24,6 +24,8 @@ declare(strict_types=1);
 namespace pocketmine\block;
 
 use pocketmine\entity\Entity;
+use pocketmine\entity\projectile\Arrow;
+use pocketmine\item\FlintSteel;
 use pocketmine\item\Item;
 use pocketmine\math\Vector3;
 use pocketmine\Player;
@@ -46,13 +48,23 @@ class TNT extends Solid{
 	}
 
 	public function onActivate(Item $item, Player $player = null) : bool{
-		if($item->getId() === Item::FLINT_STEEL){
-			$item->useOn($this);
+		if($item instanceof FlintSteel){
+			$item->applyDamage(1);
 			$this->ignite();
 			return true;
 		}
 
 		return false;
+	}
+
+	public function hasEntityCollision() : bool{
+		return true;
+	}
+
+	public function onEntityCollide(Entity $entity) : void{
+		if($entity instanceof Arrow and $entity->isOnFire()){
+			$this->ignite();
+		}
 	}
 
 	public function ignite(int $fuse = 80){
@@ -67,5 +79,17 @@ class TNT extends Solid{
 		if($tnt !== null){
 			$tnt->spawnToAll();
 		}
+	}
+
+	public function getFlameEncouragement() : int{
+		return 15;
+	}
+
+	public function getFlammability() : int{
+		return 100;
+	}
+
+	public function onIncinerate() : void{
+		$this->ignite();
 	}
 }

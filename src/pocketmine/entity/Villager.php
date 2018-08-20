@@ -23,6 +23,8 @@ declare(strict_types=1);
 
 namespace pocketmine\entity;
 
+use pocketmine\nbt\tag\CompoundTag;
+
 class Villager extends Creature implements NPC, Ageable{
 	public const PROFESSION_FARMER = 0;
 	public const PROFESSION_LIBRARIAN = 1;
@@ -39,11 +41,11 @@ class Villager extends Creature implements NPC, Ageable{
 		return "Villager";
 	}
 
-	protected function initEntity(){
-		parent::initEntity();
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
 
 		/** @var int $profession */
-		$profession = $this->namedtag->getInt("Profession", self::PROFESSION_FARMER);
+		$profession = $nbt->getInt("Profession", self::PROFESSION_FARMER);
 
 		if($profession > 4 or $profession < 0){
 			$profession = self::PROFESSION_FARMER;
@@ -52,9 +54,11 @@ class Villager extends Creature implements NPC, Ageable{
 		$this->setProfession($profession);
 	}
 
-	public function saveNBT(){
-		parent::saveNBT();
-		$this->namedtag->setInt("Profession", $this->getProfession());
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT();
+		$nbt->setInt("Profession", $this->getProfession());
+
+		return $nbt;
 	}
 
 	/**
@@ -62,7 +66,7 @@ class Villager extends Creature implements NPC, Ageable{
 	 *
 	 * @param int $profession
 	 */
-	public function setProfession(int $profession){
+	public function setProfession(int $profession) : void{
 		$this->propertyManager->setInt(self::DATA_VARIANT, $profession);
 	}
 

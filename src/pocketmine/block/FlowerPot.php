@@ -24,7 +24,6 @@ declare(strict_types=1);
 namespace pocketmine\block;
 
 use pocketmine\item\Item;
-use pocketmine\level\Level;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Vector3;
 use pocketmine\Player;
@@ -48,14 +47,8 @@ class FlowerPot extends Flowable{
 	}
 
 	protected function recalculateBoundingBox() : ?AxisAlignedBB{
-		return new AxisAlignedBB(
-			$this->x + 0.3125,
-			$this->y,
-			$this->z + 0.3125,
-			$this->x + 0.6875,
-			$this->y + 0.375,
-			$this->z + 0.6875
-		);
+		static $f = 0.3125;
+		return new AxisAlignedBB($f, 0, $f, 1 - $f, 0.375, 1 - $f);
 	}
 
 	public function place(Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, Player $player = null) : bool{
@@ -68,16 +61,10 @@ class FlowerPot extends Flowable{
 		return true;
 	}
 
-	public function onUpdate(int $type){
-		if($type === Level::BLOCK_UPDATE_NORMAL){
-			if($this->getSide(Vector3::SIDE_DOWN)->isTransparent() === true){
-				$this->getLevel()->useBreakOn($this);
-
-				return Level::BLOCK_UPDATE_NORMAL;
-			}
+	public function onNearbyBlockChange() : void{
+		if($this->getSide(Vector3::SIDE_DOWN)->isTransparent()){
+			$this->getLevel()->useBreakOn($this);
 		}
-
-		return false;
 	}
 
 	public function onActivate(Item $item, Player $player = null) : bool{

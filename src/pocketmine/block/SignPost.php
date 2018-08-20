@@ -24,7 +24,6 @@ declare(strict_types=1);
 namespace pocketmine\block;
 
 use pocketmine\item\Item;
-use pocketmine\level\Level;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Vector3;
 use pocketmine\Player;
@@ -62,7 +61,7 @@ class SignPost extends Transparent{
 		if($face !== Vector3::SIDE_DOWN){
 
 			if($face === Vector3::SIDE_UP){
-				$this->meta = floor((($player->yaw + 180) * 16 / 360) + 0.5) & 0x0f;
+				$this->meta = $player !== null ? (floor((($player->yaw + 180) * 16 / 360) + 0.5) & 0x0f) : 0;
 				$this->getLevel()->setBlock($blockReplace, $this, true);
 			}else{
 				$this->meta = $face;
@@ -77,16 +76,10 @@ class SignPost extends Transparent{
 		return false;
 	}
 
-	public function onUpdate(int $type){
-		if($type === Level::BLOCK_UPDATE_NORMAL){
-			if($this->getSide(Vector3::SIDE_DOWN)->getId() === self::AIR){
-				$this->getLevel()->useBreakOn($this);
-
-				return Level::BLOCK_UPDATE_NORMAL;
-			}
+	public function onNearbyBlockChange() : void{
+		if($this->getSide(Vector3::SIDE_DOWN)->getId() === self::AIR){
+			$this->getLevel()->useBreakOn($this);
 		}
-
-		return false;
 	}
 
 	public function getToolType() : int{

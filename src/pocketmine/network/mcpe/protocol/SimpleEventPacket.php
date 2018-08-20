@@ -25,23 +25,26 @@ namespace pocketmine\network\mcpe\protocol;
 
 #include <rules/DataPacket.h>
 
-use pocketmine\network\mcpe\NetworkSession;
+use pocketmine\network\mcpe\handler\SessionHandler;
 
 class SimpleEventPacket extends DataPacket{
 	public const NETWORK_ID = ProtocolInfo::SIMPLE_EVENT_PACKET;
 
+	public const TYPE_ENABLE_COMMANDS = 1;
+	public const TYPE_DISABLE_COMMANDS = 2;
+
 	/** @var int */
-	public $unknownShort1;
+	public $eventType;
 
-	protected function decodePayload(){
-		$this->unknownShort1 = $this->getLShort();
+	protected function decodePayload() : void{
+		$this->eventType = $this->getLShort();
 	}
 
-	protected function encodePayload(){
-		$this->putLShort($this->unknownShort1);
+	protected function encodePayload() : void{
+		$this->putLShort($this->eventType);
 	}
 
-	public function handle(NetworkSession $session) : bool{
-		return $session->handleSimpleEvent($this);
+	public function handle(SessionHandler $handler) : bool{
+		return $handler->handleSimpleEvent($this);
 	}
 }

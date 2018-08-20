@@ -26,7 +26,6 @@ namespace pocketmine\event\entity;
 use pocketmine\entity\object\ItemEntity;
 
 class ItemSpawnEvent extends EntityEvent{
-	public static $handlerList = null;
 
 	/**
 	 * @param ItemEntity $item
@@ -42,5 +41,4 @@ class ItemSpawnEvent extends EntityEvent{
 	public function getEntity(){
 		return $this->entity;
 	}
-
 }

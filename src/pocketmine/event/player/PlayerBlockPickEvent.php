@@ -32,8 +32,6 @@ use pocketmine\Player;
  * Called when a player middle-clicks on a block to get an item in creative mode.
  */
 class PlayerBlockPickEvent extends PlayerEvent implements Cancellable{
-	public static $handlerList = null;
-
 	/** @var Block */
 	private $blockClicked;
 	/** @var Item */
@@ -51,9 +49,5 @@ class PlayerBlockPickEvent extends PlayerEvent implements Cancellable{
 
 	public function getResultItem() : Item{
 		return $this->resultItem;
-	}
-
-	public function setResultItem(Item $item) : void{
-		$this->resultItem = clone $item;
 	}
 }

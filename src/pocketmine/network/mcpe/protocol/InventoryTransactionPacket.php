@@ -25,7 +25,7 @@ namespace pocketmine\network\mcpe\protocol;
 
 #include <rules/DataPacket.h>
 
-use pocketmine\network\mcpe\NetworkSession;
+use pocketmine\network\mcpe\handler\SessionHandler;
 use pocketmine\network\mcpe\protocol\types\NetworkInventoryAction;
 
 class InventoryTransactionPacket extends DataPacket{
@@ -56,6 +56,12 @@ class InventoryTransactionPacket extends DataPacket{
 	 * determine whether we're doing a crafting transaction.
 	 */
 	public $isCraftingPart = false;
+	/**
+	 * @var bool
+	 * NOTE: THIS FIELD DOES NOT EXIST IN THE PROTOCOL, it's merely used for convenience for PocketMine-MP to easily
+	 * determine whether we're doing a crafting transaction.
+	 */
+	public $isFinalCraftingPart = false;
 
 	/** @var NetworkInventoryAction[] */
 	public $actions = [];
@@ -63,7 +69,7 @@ class InventoryTransactionPacket extends DataPacket{
 	/** @var \stdClass */
 	public $trData;
 
-	protected function decodePayload(){
+	protected function decodePayload() : void{
 		$this->transactionType = $this->getUnsignedVarInt();
 
 		for($i = 0, $count = $this->getUnsignedVarInt(); $i < $count; ++$i){
@@ -105,7 +111,7 @@ class InventoryTransactionPacket extends DataPacket{
 		}
 	}
 
-	protected function encodePayload(){
+	protected function encodePayload() : void{
 		$this->putUnsignedVarInt($this->transactionType);
 
 		$this->putUnsignedVarInt(count($this->actions));
@@ -145,7 +151,7 @@ class InventoryTransactionPacket extends DataPacket{
 		}
 	}
 
-	public function handle(NetworkSession $session) : bool{
-		return $session->handleInventoryTransaction($this);
+	public function handle(SessionHandler $handler) : bool{
+		return $handler->handleInventoryTransaction($this);
 	}
 }

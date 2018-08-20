@@ -54,9 +54,7 @@ class TimeCommand extends VanillaCommand{
 				return true;
 			}
 			foreach($sender->getServer()->getLevels() as $level){
-				$level->checkTime();
 				$level->startTime();
-				$level->checkTime();
 			}
 			Command::broadcastCommandMessage($sender, "Restarted the time");
 			return true;
@@ -67,9 +65,7 @@ class TimeCommand extends VanillaCommand{
 				return true;
 			}
 			foreach($sender->getServer()->getLevels() as $level){
-				$level->checkTime();
 				$level->stopTime();
-				$level->checkTime();
 			}
 			Command::broadcastCommandMessage($sender, "Stopped the time");
 			return true;
@@ -101,7 +97,7 @@ class TimeCommand extends VanillaCommand{
 			}
 
 			if($args[1] === "day"){
-				$value = 0;
+				$value = Level::TIME_DAY;
 			}elseif($args[1] === "night"){
 				$value = Level::TIME_NIGHT;
 			}else{
@@ -109,9 +105,7 @@ class TimeCommand extends VanillaCommand{
 			}
 
 			foreach($sender->getServer()->getLevels() as $level){
-				$level->checkTime();
 				$level->setTime($value);
-				$level->checkTime();
 			}
 			Command::broadcastCommandMessage($sender, new TranslationContainer("commands.time.set", [$value]));
 		}elseif($args[0] === "add"){
@@ -123,9 +117,7 @@ class TimeCommand extends VanillaCommand{
 
 			$value = $this->getInteger($sender, $args[1], 0);
 			foreach($sender->getServer()->getLevels() as $level){
-				$level->checkTime();
 				$level->setTime($level->getTime() + $value);
-				$level->checkTime();
 			}
 			Command::broadcastCommandMessage($sender, new TranslationContainer("commands.time.added", [$value]));
 		}else{

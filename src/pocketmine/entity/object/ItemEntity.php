@@ -24,11 +24,11 @@ declare(strict_types=1);
 namespace pocketmine\entity\object;
 
 use pocketmine\entity\Entity;
-use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\ItemDespawnEvent;
 use pocketmine\event\entity\ItemSpawnEvent;
 use pocketmine\event\inventory\InventoryPickupItemEvent;
 use pocketmine\item\Item;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\protocol\AddItemEntityPacket;
 use pocketmine\network\mcpe\protocol\TakeItemEntityPacket;
 use pocketmine\Player;
@@ -54,39 +54,26 @@ class ItemEntity extends Entity{
 
 	public $canCollide = false;
 
-	protected function initEntity(){
-		parent::initEntity();
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
 
 		$this->setMaxHealth(5);
-		$this->setHealth($this->namedtag->getShort("Health", (int) $this->getHealth()));
-		$this->age = $this->namedtag->getShort("Age", $this->age);
-		$this->pickupDelay = $this->namedtag->getShort("PickupDelay", $this->pickupDelay);
-		$this->owner = $this->namedtag->getString("Owner", $this->owner);
-		$this->thrower = $this->namedtag->getString("Thrower", $this->thrower);
+		$this->setHealth($nbt->getShort("Health", (int) $this->getHealth()));
+		$this->age = $nbt->getShort("Age", $this->age);
+		$this->pickupDelay = $nbt->getShort("PickupDelay", $this->pickupDelay);
+		$this->owner = $nbt->getString("Owner", $this->owner);
+		$this->thrower = $nbt->getString("Thrower", $this->thrower);
 
 
-		$itemTag = $this->namedtag->getCompoundTag("Item");
+		$itemTag = $nbt->getCompoundTag("Item");
 		if($itemTag === null){
-			$this->close();
-			return;
+			throw new \UnexpectedValueException("Invalid " . get_class($this) . " entity: expected \"Item\" NBT tag not found");
 		}
 
 		$this->item = Item::nbtDeserialize($itemTag);
 
 
 		$this->server->getPluginManager()->callEvent(new ItemSpawnEvent($this));
-	}
-
-	public function attack(EntityDamageEvent $source){
-		if(
-			$source->getCause() === EntityDamageEvent::CAUSE_VOID or
-			$source->getCause() === EntityDamageEvent::CAUSE_FIRE_TICK or
-			$source->getCause() === EntityDamageEvent::CAUSE_LAVA or
-			$source->getCause() === EntityDamageEvent::CAUSE_ENTITY_EXPLOSION or
-			$source->getCause() === EntityDamageEvent::CAUSE_BLOCK_EXPLOSION
-		){
-			parent::attack($source);
-		}
 	}
 
 	public function entityBaseTick(int $tickDiff = 1) : bool{
@@ -119,7 +106,7 @@ class ItemEntity extends Entity{
 		return $hasUpdate;
 	}
 
-	protected function tryChangeMovement(){
+	protected function tryChangeMovement() : void{
 		$this->checkObstruction($this->x, $this->y, $this->z);
 		parent::tryChangeMovement();
 	}
@@ -128,18 +115,20 @@ class ItemEntity extends Entity{
 		return true;
 	}
 
-	public function saveNBT(){
-		parent::saveNBT();
-		$this->namedtag->setTag($this->item->nbtSerialize(-1, "Item"));
-		$this->namedtag->setShort("Health", (int) $this->getHealth());
-		$this->namedtag->setShort("Age", $this->age);
-		$this->namedtag->setShort("PickupDelay", $this->pickupDelay);
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT();
+		$nbt->setTag($this->item->nbtSerialize(-1, "Item"));
+		$nbt->setShort("Health", (int) $this->getHealth());
+		$nbt->setShort("Age", $this->age);
+		$nbt->setShort("PickupDelay", $this->pickupDelay);
 		if($this->owner !== null){
-			$this->namedtag->setString("Owner", $this->owner);
+			$nbt->setString("Owner", $this->owner);
 		}
 		if($this->thrower !== null){
-			$this->namedtag->setString("Thrower", $this->thrower);
+			$nbt->setString("Thrower", $this->thrower);
 		}
+
+		return $nbt;
 	}
 
 	/**
@@ -167,7 +156,7 @@ class ItemEntity extends Entity{
 	/**
 	 * @param int $delay
 	 */
-	public function setPickupDelay(int $delay){
+	public function setPickupDelay(int $delay) : void{
 		$this->pickupDelay = $delay;
 	}
 
@@ -181,7 +170,7 @@ class ItemEntity extends Entity{
 	/**
 	 * @param string $owner
 	 */
-	public function setOwner(string $owner){
+	public function setOwner(string $owner) : void{
 		$this->owner = $owner;
 	}
 
@@ -195,7 +184,7 @@ class ItemEntity extends Entity{
 	/**
 	 * @param string $thrower
 	 */
-	public function setThrower(string $thrower){
+	public function setThrower(string $thrower) : void{
 		$this->thrower = $thrower;
 	}
 
@@ -207,11 +196,11 @@ class ItemEntity extends Entity{
 		$pk->item = $this->getItem();
 		$pk->metadata = $this->propertyManager->getAll();
 
-		$player->dataPacket($pk);
+		$player->sendDataPacket($pk);
 	}
 
-	public function onCollideWithPlayer(Player $player){
-		if($this->getPickupDelay() > 0){
+	public function onCollideWithPlayer(Player $player) : void{
+		if($this->getPickupDelay() !== 0){
 			return;
 		}
 

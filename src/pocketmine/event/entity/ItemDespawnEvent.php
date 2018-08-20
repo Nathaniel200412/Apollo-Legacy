@@ -27,7 +27,6 @@ use pocketmine\entity\object\ItemEntity;
 use pocketmine\event\Cancellable;
 
 class ItemDespawnEvent extends EntityEvent implements Cancellable{
-	public static $handlerList = null;
 
 	/**
 	 * @param ItemEntity $item
@@ -43,5 +42,4 @@ class ItemDespawnEvent extends EntityEvent implements Cancellable{
 	public function getEntity(){
 		return $this->entity;
 	}
-
 }

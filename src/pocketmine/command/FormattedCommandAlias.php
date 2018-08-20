@@ -47,20 +47,19 @@ class FormattedCommandAlias extends Command{
 		foreach($this->formatStrings as $formatString){
 			try{
 				$commands[] = $this->buildCommand($formatString, $args);
+			}catch(\InvalidArgumentException $e){
+				$sender->sendMessage(TextFormat::RED . $e->getMessage());
+				return false;
 			}catch(\Throwable $e){
-				if($e instanceof \InvalidArgumentException){
-					$sender->sendMessage(TextFormat::RED . $e->getMessage());
-				}else{
-					$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.exception"));
-					$sender->getServer()->getLogger()->logException($e);
-				}
+				$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.exception"));
+				$sender->getServer()->getLogger()->logException($e);
 
 				return false;
 			}
 		}
 
 		foreach($commands as $command){
-			$result |= Server::getInstance()->dispatchCommand($sender, $command);
+			$result |= Server::getInstance()->dispatchCommand($sender, $command, true);
 		}
 
 		return (bool) $result;
@@ -155,5 +154,4 @@ class FormattedCommandAlias extends Command{
 	private static function inRange(int $i, int $j, int $k) : bool{
 		return $i >= $j and $i <= $k;
 	}
-
 }

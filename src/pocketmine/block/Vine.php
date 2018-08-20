@@ -25,7 +25,6 @@ namespace pocketmine\block;
 
 use pocketmine\entity\Entity;
 use pocketmine\item\Item;
-use pocketmine\level\Level;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Vector3;
 use pocketmine\Player;
@@ -62,10 +61,6 @@ class Vine extends Flowable{
 		return true;
 	}
 
-	public function ticksRandomly() : bool{
-		return true;
-	}
-
 	public function canBeReplaced() : bool{
 		return true;
 	}
@@ -75,7 +70,6 @@ class Vine extends Flowable{
 	}
 
 	protected function recalculateBoundingBox() : ?AxisAlignedBB{
-
 		$minX = 1;
 		$minY = 1;
 		$minZ = 1;
@@ -126,14 +120,7 @@ class Vine extends Flowable{
 			$maxZ = 1;
 		}
 
-		return new AxisAlignedBB(
-			$this->x + $minX,
-			$this->y + $minY,
-			$this->z + $minZ,
-			$this->x + $maxX,
-			$this->y + $maxY,
-			$this->z + $maxZ
-		);
+		return new AxisAlignedBB($minX, $minY, $minZ, $maxX, $maxY, $maxZ);
 	}
 
 	public function place(Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, Player $player = null) : bool{
@@ -157,42 +144,42 @@ class Vine extends Flowable{
 		return true;
 	}
 
-	public function onUpdate(int $type){
-		if($type === Level::BLOCK_UPDATE_NORMAL){
-			$sides = [
-				self::FLAG_SOUTH => Vector3::SIDE_SOUTH,
-				self::FLAG_WEST => Vector3::SIDE_WEST,
-				self::FLAG_NORTH => Vector3::SIDE_NORTH,
-				self::FLAG_EAST => Vector3::SIDE_EAST
-			];
+	public function onNearbyBlockChange() : void{
+		$sides = [
+			self::FLAG_SOUTH => Vector3::SIDE_SOUTH,
+			self::FLAG_WEST => Vector3::SIDE_WEST,
+			self::FLAG_NORTH => Vector3::SIDE_NORTH,
+			self::FLAG_EAST => Vector3::SIDE_EAST
+		];
 
-			$meta = $this->meta;
+		$meta = $this->meta;
 
-			foreach($sides as $flag => $side){
-				if(($meta & $flag) === 0){
-					continue;
-				}
-
-				if(!$this->getSide($side)->isSolid()){
-					$meta &= ~$flag;
-				}
+		foreach($sides as $flag => $side){
+			if(($meta & $flag) === 0){
+				continue;
 			}
 
-			if($meta !== $this->meta){
-				if($meta === 0){
-					$this->level->useBreakOn($this);
-				}else{
-					$this->meta = $meta;
-					$this->level->setBlock($this, $this);
-				}
-
-				return Level::BLOCK_UPDATE_NORMAL;
+			if(!$this->getSide($side)->isSolid()){
+				$meta &= ~$flag;
 			}
-		}elseif($type === Level::BLOCK_UPDATE_RANDOM){
-			//TODO: vine growth
 		}
 
-		return false;
+		if($meta !== $this->meta){
+			if($meta === 0){
+				$this->level->useBreakOn($this);
+			}else{
+				$this->meta = $meta;
+				$this->level->setBlock($this, $this);
+			}
+		}
+	}
+
+	public function ticksRandomly() : bool{
+		return true;
+	}
+
+	public function onRandomTick() : void{
+		//TODO: vine growth
 	}
 
 	public function getVariantBitmask() : int{
@@ -209,5 +196,13 @@ class Vine extends Flowable{
 
 	public function getToolType() : int{
 		return BlockToolType::TYPE_AXE;
+	}
+
+	public function getFlameEncouragement() : int{
+		return 15;
+	}
+
+	public function getFlammability() : int{
+		return 100;
 	}
 }

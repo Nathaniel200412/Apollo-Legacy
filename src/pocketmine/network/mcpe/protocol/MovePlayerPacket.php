@@ -27,7 +27,7 @@ namespace pocketmine\network\mcpe\protocol;
 
 
 use pocketmine\math\Vector3;
-use pocketmine\network\mcpe\NetworkSession;
+use pocketmine\network\mcpe\handler\SessionHandler;
 
 class MovePlayerPacket extends DataPacket{
 	public const NETWORK_ID = ProtocolInfo::MOVE_PLAYER_PACKET;
@@ -54,11 +54,11 @@ class MovePlayerPacket extends DataPacket{
 	/** @var int */
 	public $ridingEid = 0;
 	/** @var int */
-	public $int1 = 0;
+	public $teleportCause = 0;
 	/** @var int */
-	public $int2 = 0;
+	public $teleportItem = 0;
 
-	protected function decodePayload(){
+	protected function decodePayload() : void{
 		$this->entityRuntimeId = $this->getEntityRuntimeId();
 		$this->position = $this->getVector3();
 		$this->pitch = $this->getLFloat();
@@ -68,12 +68,12 @@ class MovePlayerPacket extends DataPacket{
 		$this->onGround = $this->getBool();
 		$this->ridingEid = $this->getEntityRuntimeId();
 		if($this->mode === MovePlayerPacket::MODE_TELEPORT){
-			$this->int1 = $this->getLInt();
-			$this->int2 = $this->getLInt();
+			$this->teleportCause = $this->getLInt();
+			$this->teleportItem = $this->getLInt();
 		}
 	}
 
-	protected function encodePayload(){
+	protected function encodePayload() : void{
 		$this->putEntityRuntimeId($this->entityRuntimeId);
 		$this->putVector3($this->position);
 		$this->putLFloat($this->pitch);
@@ -83,13 +83,12 @@ class MovePlayerPacket extends DataPacket{
 		$this->putBool($this->onGround);
 		$this->putEntityRuntimeId($this->ridingEid);
 		if($this->mode === MovePlayerPacket::MODE_TELEPORT){
-			$this->putLInt($this->int1);
-			$this->putLInt($this->int2);
+			$this->putLInt($this->teleportCause);
+			$this->putLInt($this->teleportItem);
 		}
 	}
 
-	public function handle(NetworkSession $session) : bool{
-		return $session->handleMovePlayer($this);
+	public function handle(SessionHandler $handler) : bool{
+		return $handler->handleMovePlayer($this);
 	}
-
 }
