@@ -39,7 +39,7 @@ namespace pocketmine {
 	const NAME = "Apollo-Legecy";
 	const BASE_VERSION = "4.0.0";
 	const IS_DEVELOPMENT_BUILD = true;
-	const BUILD_NUMBER =0.1;
+	const BUILD_NUMBER = 0;
 
 	const MIN_PHP_VERSION = "7.2.0";
 
