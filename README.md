@@ -1,6 +1,8 @@
-![Apollo](https://i.imgur.com/ngjoSVy.png)
+![Apollo](https://i.imgur.com/q75irAo.png)
 
-Apollo is a Minecraft: PE Server Software with an improved Generator and a lot more features.  
+Apollo is a Minecraft: PE Server Software with an improved Generator and a lot more features.
+
+![Apollo Rocket](https://media.giphy.com/media/3XERxMrwRx6E1KCrqh/giphy.gif)
 
 **CircleCI Build Status** [![CircleCI](https://circleci.com/ghApolloBE/Apollo-Legacy.svg?style=svg)](https://circleci.com/gh/ApolloBE/Apollo-Legacy)
 
