@@ -32,13 +32,15 @@ use pocketmine\event\Listener;
 use pocketmine\event\plugin\PluginDisableEvent;
 use pocketmine\event\plugin\PluginEnableEvent;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
-use pocketmine\permission\PermissionManager;
+use pocketmine\permission\Permissible;
+use pocketmine\permission\Permission;
 use pocketmine\Server;
+use pocketmine\timings\Timings;
 use pocketmine\timings\TimingsHandler;
 use pocketmine\utils\Utils;
 
 /**
- * Manages all the plugins
+ * Manages all the plugins, Permissions and Permissibles
  */
 class PluginManager{
 	private const MAX_EVENT_CALL_DEPTH = 50;
@@ -60,6 +62,36 @@ class PluginManager{
 	protected $enabledPlugins = [];
 
 	/**
+	 * @var Permission[]
+	 */
+	protected $permissions = [];
+
+	/**
+	 * @var Permission[]
+	 */
+	protected $defaultPerms = [];
+
+	/**
+	 * @var Permission[]
+	 */
+	protected $defaultPermsOp = [];
+
+	/**
+	 * @var Permissible[][]
+	 */
+	protected $permSubs = [];
+
+	/**
+	 * @var Permissible[]
+	 */
+	protected $defSubs = [];
+
+	/**
+	 * @var Permissible[]
+	 */
+	protected $defSubsOp = [];
+
+	/**
 	 * @var PluginLoader[]
 	 */
 	protected $fileAssociations = [];
@@ -69,6 +101,9 @@ class PluginManager{
 
 	/** @var string|null */
 	private $pluginDataDirectory;
+
+	/** @var TimingsHandler */
+	public static $pluginParentTimer;
 
 	/**
 	 * @param Server           $server
@@ -145,9 +180,6 @@ class PluginManager{
 					if(file_exists($dataFolder) and !is_dir($dataFolder)){
 						$this->server->getLogger()->error("Projected dataFolder '" . $dataFolder . "' for " . $description->getName() . " exists and is not a directory");
 						return null;
-					}
-					if(!file_exists($dataFolder)){
-						mkdir($dataFolder, 0777, true);
 					}
 
 					$prefixed = $loader->getAccessProtocol() . $path;
@@ -383,7 +415,7 @@ class PluginManager{
 					continue;
 				}
 
-				if($pluginNumbers[1] === $serverNumbers[1] and $pluginNumbers[2] > $serverNumbers[2]){ //If the plugin requires bug fixes in patches, being backwards compatible
+				if($pluginNumbers[2] > $serverNumbers[2]){ //If the plugin requires bug fixes in patches, being backwards compatible
 					continue;
 				}
 			}
@@ -392,6 +424,169 @@ class PluginManager{
 		}
 
 		return false;
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return null|Permission
+	 */
+	public function getPermission(string $name){
+		return $this->permissions[$name] ?? null;
+	}
+
+	/**
+	 * @param Permission $permission
+	 *
+	 * @return bool
+	 */
+	public function addPermission(Permission $permission) : bool{
+		if(!isset($this->permissions[$permission->getName()])){
+			$this->permissions[$permission->getName()] = $permission;
+			$this->calculatePermissionDefault($permission);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param string|Permission $permission
+	 */
+	public function removePermission($permission){
+		if($permission instanceof Permission){
+			unset($this->permissions[$permission->getName()]);
+		}else{
+			unset($this->permissions[$permission]);
+		}
+	}
+
+	/**
+	 * @param bool $op
+	 *
+	 * @return Permission[]
+	 */
+	public function getDefaultPermissions(bool $op) : array{
+		if($op){
+			return $this->defaultPermsOp;
+		}else{
+			return $this->defaultPerms;
+		}
+	}
+
+	/**
+	 * @param Permission $permission
+	 */
+	public function recalculatePermissionDefaults(Permission $permission){
+		if(isset($this->permissions[$permission->getName()])){
+			unset($this->defaultPermsOp[$permission->getName()]);
+			unset($this->defaultPerms[$permission->getName()]);
+			$this->calculatePermissionDefault($permission);
+		}
+	}
+
+	/**
+	 * @param Permission $permission
+	 */
+	private function calculatePermissionDefault(Permission $permission){
+		Timings::$permissionDefaultTimer->startTiming();
+		if($permission->getDefault() === Permission::DEFAULT_OP or $permission->getDefault() === Permission::DEFAULT_TRUE){
+			$this->defaultPermsOp[$permission->getName()] = $permission;
+			$this->dirtyPermissibles(true);
+		}
+
+		if($permission->getDefault() === Permission::DEFAULT_NOT_OP or $permission->getDefault() === Permission::DEFAULT_TRUE){
+			$this->defaultPerms[$permission->getName()] = $permission;
+			$this->dirtyPermissibles(false);
+		}
+		Timings::$permissionDefaultTimer->startTiming();
+	}
+
+	/**
+	 * @param bool $op
+	 */
+	private function dirtyPermissibles(bool $op){
+		foreach($this->getDefaultPermSubscriptions($op) as $p){
+			$p->recalculatePermissions();
+		}
+	}
+
+	/**
+	 * @param string      $permission
+	 * @param Permissible $permissible
+	 */
+	public function subscribeToPermission(string $permission, Permissible $permissible){
+		if(!isset($this->permSubs[$permission])){
+			$this->permSubs[$permission] = [];
+		}
+		$this->permSubs[$permission][spl_object_hash($permissible)] = $permissible;
+	}
+
+	/**
+	 * @param string      $permission
+	 * @param Permissible $permissible
+	 */
+	public function unsubscribeFromPermission(string $permission, Permissible $permissible){
+		if(isset($this->permSubs[$permission])){
+			unset($this->permSubs[$permission][spl_object_hash($permissible)]);
+			if(count($this->permSubs[$permission]) === 0){
+				unset($this->permSubs[$permission]);
+			}
+		}
+	}
+
+	/**
+	 * @param string $permission
+	 *
+	 * @return array|Permissible[]
+	 */
+	public function getPermissionSubscriptions(string $permission) : array{
+		return $this->permSubs[$permission] ?? [];
+	}
+
+	/**
+	 * @param bool        $op
+	 * @param Permissible $permissible
+	 */
+	public function subscribeToDefaultPerms(bool $op, Permissible $permissible){
+		if($op){
+			$this->defSubsOp[spl_object_hash($permissible)] = $permissible;
+		}else{
+			$this->defSubs[spl_object_hash($permissible)] = $permissible;
+		}
+	}
+
+	/**
+	 * @param bool        $op
+	 * @param Permissible $permissible
+	 */
+	public function unsubscribeFromDefaultPerms(bool $op, Permissible $permissible){
+		if($op){
+			unset($this->defSubsOp[spl_object_hash($permissible)]);
+		}else{
+			unset($this->defSubs[spl_object_hash($permissible)]);
+		}
+	}
+
+	/**
+	 * @param bool $op
+	 *
+	 * @return Permissible[]
+	 */
+	public function getDefaultPermSubscriptions(bool $op) : array{
+		if($op){
+			return $this->defSubsOp;
+		}
+
+		return $this->defSubs;
+	}
+
+	/**
+	 * @return Permission[]
+	 */
+	public function getPermissions() : array{
+		return $this->permissions;
 	}
 
 	/**
@@ -411,9 +606,8 @@ class PluginManager{
 			try{
 				$this->server->getLogger()->info($this->server->getLanguage()->translateString("pocketmine.plugin.enable", [$plugin->getDescription()->getFullName()]));
 
-				$permManager = PermissionManager::getInstance();
 				foreach($plugin->getDescription()->getPermissions() as $perm){
-					$permManager->addPermission($perm);
+					$this->addPermission($perm);
 				}
 				$plugin->getScheduler()->setEnabled(true);
 				$plugin->setEnabled(true);
@@ -508,9 +702,8 @@ class PluginManager{
 			}
 			$plugin->getScheduler()->shutdown();
 			HandlerList::unregisterAll($plugin);
-			$permManager = PermissionManager::getInstance();
 			foreach($plugin->getDescription()->getPermissions() as $perm){
-				$permManager->removePermission($perm);
+				$this->removePermission($perm);
 			}
 		}
 	}
@@ -526,6 +719,9 @@ class PluginManager{
 		$this->plugins = [];
 		$this->enabledPlugins = [];
 		$this->fileAssociations = [];
+		$this->permissions = [];
+		$this->defaultPerms = [];
+		$this->defaultPermsOp = [];
 	}
 
 	/**
@@ -661,7 +857,7 @@ class PluginManager{
 			throw new PluginException("Plugin attempted to register " . $event . " while not enabled");
 		}
 
-		$timings = new TimingsHandler("Plugin: " . $plugin->getDescription()->getFullName() . " Event: " . get_class($listener) . "::" . ($executor instanceof MethodEventExecutor ? $executor->getMethod() : "???") . "(" . (new \ReflectionClass($event))->getShortName() . ")");
+		$timings = new TimingsHandler("Plugin: " . $plugin->getDescription()->getFullName() . " Event: " . get_class($listener) . "::" . ($executor instanceof MethodEventExecutor ? $executor->getMethod() : "???") . "(" . (new \ReflectionClass($event))->getShortName() . ")", self::$pluginParentTimer);
 
 		$this->getEventListeners($event)->register(new RegisteredListener($listener, $executor, $priority, $plugin, $ignoreCancelled, $timings));
 	}

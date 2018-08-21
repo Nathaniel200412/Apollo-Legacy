@@ -254,7 +254,9 @@ abstract class PluginBase implements Plugin{
 	}
 
 	public function saveConfig(){
-		$this->getConfig()->save();
+		if(!$this->getConfig()->save()){
+			$this->getLogger()->critical("Could not save config to " . $this->configFile);
+		}
 	}
 
 	public function saveDefaultConfig() : bool{
@@ -265,8 +267,14 @@ abstract class PluginBase implements Plugin{
 	}
 
 	public function reloadConfig(){
-		$this->saveDefaultConfig();
+		if(!$this->saveDefaultConfig()){
+			@mkdir($this->dataFolder);
+		}
 		$this->config = new Config($this->configFile);
+		if(($configStream = $this->getResource("config.yml")) !== null){
+			$this->config->setDefaults(yaml_parse(Config::fixYAMLIndexes(stream_get_contents($configStream))));
+			fclose($configStream);
+		}
 	}
 
 	/**

@@ -59,7 +59,7 @@ class FormattedCommandAlias extends Command{
 		}
 
 		foreach($commands as $command){
-			$result |= Server::getInstance()->dispatchCommand($sender, $command, true);
+			$result |= Server::getInstance()->dispatchCommand($sender, $command);
 		}
 
 		return (bool) $result;
