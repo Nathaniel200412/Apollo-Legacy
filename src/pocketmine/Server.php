@@ -39,15 +39,13 @@ use pocketmine\event\HandlerList;
 use pocketmine\event\level\LevelInitEvent;
 use pocketmine\event\level\LevelLoadEvent;
 use pocketmine\event\player\PlayerDataSaveEvent;
-use pocketmine\event\server\CommandEvent;
-use pocketmine\event\server\DataPacketBroadcastEvent;
 use pocketmine\event\server\QueryRegenerateEvent;
+use pocketmine\event\server\ServerCommandEvent;
 use pocketmine\inventory\CraftingManager;
 use pocketmine\item\enchantment\Enchantment;
 use pocketmine\item\Item;
 use pocketmine\item\ItemFactory;
-use pocketmine\lang\Language;
-use pocketmine\lang\LanguageNotFoundException;
+use pocketmine\lang\BaseLang;
 use pocketmine\lang\TextContainer;
 use pocketmine\level\biome\Biome;
 use pocketmine\level\format\io\LevelProvider;
@@ -71,12 +69,8 @@ use pocketmine\nbt\tag\LongTag;
 use pocketmine\nbt\tag\ShortTag;
 use pocketmine\nbt\tag\StringTag;
 use pocketmine\network\AdvancedNetworkInterface;
-use pocketmine\network\mcpe\CompressBatchPromise;
-use pocketmine\network\mcpe\CompressBatchTask;
-use pocketmine\network\mcpe\NetworkCipher;
-use pocketmine\network\mcpe\NetworkCompression;
-use pocketmine\network\mcpe\NetworkSession;
-use pocketmine\network\mcpe\PacketStream;
+use pocketmine\network\mcpe\CompressBatchedTask;
+use pocketmine\network\mcpe\protocol\BatchPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\PlayerListPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
@@ -88,7 +82,6 @@ use pocketmine\network\rcon\RCON;
 use pocketmine\network\upnp\UPnP;
 use pocketmine\permission\BanList;
 use pocketmine\permission\DefaultPermissions;
-use pocketmine\permission\PermissionManager;
 use pocketmine\plugin\PharPluginLoader;
 use pocketmine\plugin\Plugin;
 use pocketmine\plugin\PluginLoadOrder;
@@ -106,7 +99,6 @@ use pocketmine\timings\TimingsHandler;
 use pocketmine\updater\AutoUpdater;
 use pocketmine\utils\Binary;
 use pocketmine\utils\Config;
-use pocketmine\utils\Internet;
 use pocketmine\utils\MainLogger;
 use pocketmine\utils\Terminal;
 use pocketmine\utils\TextFormat;
@@ -231,6 +223,8 @@ class Server{
 	private $network;
 	/** @var bool */
 	private $networkCompressionAsync = true;
+	/** @var int */
+	public $networkCompressionLevel = 7;
 
 	/** @var bool */
 	private $autoTickRate = true;
@@ -246,8 +240,8 @@ class Server{
 	/** @var int */
 	private $autoSaveTicks = 6000;
 
-	/** @var Language */
-	private $language;
+	/** @var BaseLang */
+	private $baseLang;
 	/** @var bool */
 	private $forceLanguage = false;
 
@@ -292,6 +286,9 @@ class Server{
 
 	/** @var Level */
 	private $levelDefault = null;
+
+	/** @var Config */
+	private $blConfig;
 
 	/**
 	 * @return string
@@ -1031,7 +1028,6 @@ class Server{
 			return false;
 		}
 
-		/** @see LevelProvider::__construct() */
 		$level = new Level($this, $name, new $providerClass($path));
 
 		$this->levels[$level->getId()] = $level;
@@ -1079,7 +1075,6 @@ class Server{
 		/** @var LevelProvider $providerClass */
 		$providerClass::generate($path, $name, $seed, $generator, $options);
 
-		/** @see LevelProvider::__construct() */
 		$level = new Level($this, $name, new $providerClass($path));
 		$this->levels[$level->getId()] = $level;
 
@@ -1408,8 +1403,9 @@ class Server{
 	 * @param \AttachableThreadedLogger $logger
 	 * @param string                    $dataPath
 	 * @param string                    $pluginPath
+	 * @param BaseLang					$lang
 	 */
-	public function __construct(\ClassLoader $autoloader, \AttachableThreadedLogger $logger, string $dataPath, string $pluginPath){
+	public function __construct(\ClassLoader $autoloader, \AttachableThreadedLogger $logger, string $dataPath, string $pluginPath, BaseLang $lang = null){
 		if(self::$instance !== null){
 			throw new \InvalidStateException("Only one server instance can exist at once");
 		}
@@ -1445,39 +1441,34 @@ class Server{
 			}
 			$this->config = new Config($this->dataPath . "pocketmine.yml", Config::YAML, []);
 
+			$this->logger->info("Loading apollo.yml...");
+			if(!file_exists($this->dataPath . "apollo.yml")){
+				$content = file_get_contents(\pocketmine\RESOURCE_PATH . "apollo.yml");
+				@file_put_contents($this->dataPath . "apollo.yml", $content);
+			}
+			$this->blConfig = new Config($this->dataPath . "apollo.yml", Config::YAML);
+
 			define('pocketmine\DEBUG', (int) $this->getProperty("debug.level", 1));
 
 			$this->forceLanguage = (bool) $this->getProperty("settings.force-language", false);
-			$selectedLang = $this->getProperty("settings.language", Language::FALLBACK_LANGUAGE);
-			try{
-				$this->language = new Language($selectedLang);
-			}catch(LanguageNotFoundException $e){
-				$this->logger->error($e->getMessage());
-				try{
-					$this->language = new Language(Language::FALLBACK_LANGUAGE);
-				}catch(LanguageNotFoundException $e){
-					$this->logger->emergency("Fallback language \"" . Language::FALLBACK_LANGUAGE . "\" not found");
-					return;
-				}
-			}
-
+			$this->baseLang = new BaseLang($this->getProperty("settings.language", BaseLang::FALLBACK_LANGUAGE));
 			$this->logger->info($this->getLanguage()->translateString("language.selected", [$this->getLanguage()->getName(), $this->getLanguage()->getLang()]));
 
 			if(\pocketmine\IS_DEVELOPMENT_BUILD){
 				if(!((bool) $this->getProperty("settings.enable-dev-builds", false))){
-					$this->logger->emergency($this->language->translateString("pocketmine.server.devBuild.error1", [\pocketmine\NAME]));
-					$this->logger->emergency($this->language->translateString("pocketmine.server.devBuild.error2"));
-					$this->logger->emergency($this->language->translateString("pocketmine.server.devBuild.error3"));
-					$this->logger->emergency($this->language->translateString("pocketmine.server.devBuild.error4", ["settings.enable-dev-builds"]));
+					$this->logger->emergency($this->baseLang->translateString("pocketmine.server.devBuild.error1", [\pocketmine\NAME]));
+					$this->logger->emergency($this->baseLang->translateString("pocketmine.server.devBuild.error2"));
+					$this->logger->emergency($this->baseLang->translateString("pocketmine.server.devBuild.error3"));
+					$this->logger->emergency($this->baseLang->translateString("pocketmine.server.devBuild.error4", ["settings.enable-dev-builds"]));
 					$this->forceShutdown();
 
 					return;
 				}
 
 				$this->logger->warning(str_repeat("-", 40));
-				$this->logger->warning($this->language->translateString("pocketmine.server.devBuild.warning1", [\pocketmine\NAME]));
-				$this->logger->warning($this->language->translateString("pocketmine.server.devBuild.warning2"));
-				$this->logger->warning($this->language->translateString("pocketmine.server.devBuild.warning3"));
+				$this->logger->warning($this->baseLang->translateString("pocketmine.server.devBuild.warning1", [\pocketmine\NAME]));
+				$this->logger->warning($this->baseLang->translateString("pocketmine.server.devBuild.warning2"));
+				$this->logger->warning($this->baseLang->translateString("pocketmine.server.devBuild.warning3"));
 				$this->logger->warning(str_repeat("-", 40));
 			}
 
@@ -1496,6 +1487,7 @@ class Server{
 				"motd" => \pocketmine\NAME . " Server",
 				"server-port" => 19132,
 				"white-list" => false,
+				"language" => $lang === null? "eng" : $lang->getLang(),
 				"announce-player-achievements" => true,
 				"spawn-protection" => 16,
 				"max-players" => 20,
@@ -1537,19 +1529,17 @@ class Server{
 			$this->asyncPool = new AsyncPool($this, $poolSize, (int) max(-1, (int) $this->getProperty("memory.async-worker-hard-limit", 256)), $this->autoloader, $this->logger);
 
 			if($this->getProperty("network.batch-threshold", 256) >= 0){
-				NetworkCompression::$THRESHOLD = (int) $this->getProperty("network.batch-threshold", 256);
+				Network::$BATCH_THRESHOLD = (int) $this->getProperty("network.batch-threshold", 256);
 			}else{
-				NetworkCompression::$THRESHOLD = -1;
+				Network::$BATCH_THRESHOLD = -1;
 			}
 
-			NetworkCompression::$LEVEL = $this->getProperty("network.compression-level", 7);
-			if(NetworkCompression::$LEVEL < 1 or NetworkCompression::$LEVEL > 9){
-				$this->logger->warning("Invalid network compression level " . NetworkCompression::$LEVEL . " set, setting to default 7");
-				NetworkCompression::$LEVEL = 7;
+			$this->networkCompressionLevel = $this->getProperty("network.compression-level", 7);
+			if($this->networkCompressionLevel < 1 or $this->networkCompressionLevel > 9){
+				$this->logger->warning("Invalid network compression level $this->networkCompressionLevel set, setting to default 7");
+				$this->networkCompressionLevel = 7;
 			}
 			$this->networkCompressionAsync = (bool) $this->getProperty("network.async-compression", true);
-
-			NetworkCipher::$ENABLED = (bool) $this->getProperty("network.enable-encryption", true);
 
 			$this->autoTickRate = (bool) $this->getProperty("level-settings.auto-tick-rate", true);
 			$this->autoTickRateLimit = (int) $this->getProperty("level-settings.auto-tick-rate-limit", 20);
@@ -1654,7 +1644,7 @@ class Server{
 			$this->resourceManager = new ResourcePackManager($this->getDataPath() . "resource_packs" . DIRECTORY_SEPARATOR, $this->logger);
 
 			$this->pluginManager = new PluginManager($this, $this->commandMap, ((bool) $this->getProperty("plugins.legacy-data-dir", true)) ? null : $this->getDataPath() . "plugin_data" . DIRECTORY_SEPARATOR);
-			PermissionManager::getInstance()->subscribeToPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this->consoleSender);
+			$this->pluginManager->subscribeToPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this->consoleSender);
 			$this->profilingTickRate = (float) $this->getProperty("settings.profile-report-trigger", 20);
 			$this->pluginManager->registerInterface(new PharPluginLoader($this->autoloader));
 			$this->pluginManager->registerInterface(new ScriptPluginLoader());
@@ -1763,7 +1753,7 @@ class Server{
 		if(!is_array($recipients)){
 			/** @var Player[] $recipients */
 			$recipients = [];
-			foreach(PermissionManager::getInstance()->getPermissionSubscriptions(self::BROADCAST_CHANNEL_USERS) as $permissible){
+			foreach($this->pluginManager->getPermissionSubscriptions(self::BROADCAST_CHANNEL_USERS) as $permissible){
 				if($permissible instanceof Player and $permissible->hasPermission(self::BROADCAST_CHANNEL_USERS)){
 					$recipients[spl_object_hash($permissible)] = $permissible; // do not send messages directly, or some might be repeated
 				}
@@ -1789,7 +1779,7 @@ class Server{
 			/** @var Player[] $recipients */
 			$recipients = [];
 
-			foreach(PermissionManager::getInstance()->getPermissionSubscriptions(self::BROADCAST_CHANNEL_USERS) as $permissible){
+			foreach($this->pluginManager->getPermissionSubscriptions(self::BROADCAST_CHANNEL_USERS) as $permissible){
 				if($permissible instanceof Player and $permissible->hasPermission(self::BROADCAST_CHANNEL_USERS)){
 					$recipients[spl_object_hash($permissible)] = $permissible; // do not send messages directly, or some might be repeated
 				}
@@ -1819,7 +1809,7 @@ class Server{
 			/** @var Player[] $recipients */
 			$recipients = [];
 
-			foreach(PermissionManager::getInstance()->getPermissionSubscriptions(self::BROADCAST_CHANNEL_USERS) as $permissible){
+			foreach($this->pluginManager->getPermissionSubscriptions(self::BROADCAST_CHANNEL_USERS) as $permissible){
 				if($permissible instanceof Player and $permissible->hasPermission(self::BROADCAST_CHANNEL_USERS)){
 					$recipients[spl_object_hash($permissible)] = $permissible; // do not send messages directly, or some might be repeated
 				}
@@ -1844,7 +1834,7 @@ class Server{
 		/** @var CommandSender[] $recipients */
 		$recipients = [];
 		foreach(explode(";", $permissions) as $permission){
-			foreach(PermissionManager::getInstance()->getPermissionSubscriptions($permission) as $permissible){
+			foreach($this->pluginManager->getPermissionSubscriptions($permission) as $permissible){
 				if($permissible instanceof CommandSender and $permissible->hasPermission($permission)){
 					$recipients[spl_object_hash($permissible)] = $permissible; // do not send messages directly, or some might be repeated
 				}
@@ -1863,92 +1853,68 @@ class Server{
 	 *
 	 * @param Player[]   $players
 	 * @param DataPacket $packet
-	 *
-	 * @return bool
 	 */
-	public function broadcastPacket(array $players, DataPacket $packet) : bool{
-		return $this->broadcastPackets($players, [$packet]);
-	}
-
-	/**
-	 * @param Player[]     $players
-	 * @param DataPacket[] $packets
-	 *
-	 * @return bool
-	 */
-	public function broadcastPackets(array $players, array $packets) : bool{
-		if(empty($packets)){
-			throw new \InvalidArgumentException("Cannot broadcast empty list of packets");
-		}
-
-		$this->pluginManager->callEvent($ev = new DataPacketBroadcastEvent($players, $packets));
-		if($ev->isCancelled()){
-			return false;
-		}
-
-		/** @var NetworkSession[] $targets */
-		$targets = [];
-		foreach($ev->getPlayers() as $player){
-			if($player->isConnected()){
-				$targets[] = $player->getNetworkSession();
-			}
-		}
-		if(empty($targets)){
-			return false;
-		}
-
-		$stream = new PacketStream();
-		foreach($ev->getPackets() as $packet){
-			$stream->putPacket($packet);
-		}
-
-		if(NetworkCompression::$THRESHOLD < 0 or strlen($stream->buffer) < NetworkCompression::$THRESHOLD){
-			foreach($targets as $target){
-				foreach($ev->getPackets() as $pk){
-					$target->addToSendBuffer($pk);
-				}
-			}
-		}else{
-			$promise = $this->prepareBatch($stream);
-			foreach($targets as $target){
-				$target->queueCompressed($promise);
-			}
-		}
-
-		return true;
+	public function broadcastPacket(array $players, DataPacket $packet){
+		$packet->encode();
+		$this->batchPackets($players, [$packet], false);
 	}
 
 	/**
 	 * Broadcasts a list of packets in a batch to a list of players
 	 *
-	 * @param PacketStream $stream
+	 * @param Player[]     $players
+	 * @param DataPacket[] $packets
 	 * @param bool         $forceSync
-	 *
-	 * @return CompressBatchPromise
+	 * @param bool         $immediate
 	 */
-	public function prepareBatch(PacketStream $stream, bool $forceSync = false) : CompressBatchPromise{
-		try{
-			Timings::$playerNetworkSendCompressTimer->startTiming();
+	public function batchPackets(array $players, array $packets, bool $forceSync = false, bool $immediate = false){
+		if(empty($packets)){
+			throw new \InvalidArgumentException("Cannot send empty batch");
+		}
+		Timings::$playerNetworkTimer->startTiming();
 
-			$compressionLevel = NetworkCompression::$LEVEL;
-			if(NetworkCompression::$THRESHOLD < 0 or strlen($stream->buffer) < NetworkCompression::$THRESHOLD){
-				$compressionLevel = 0; //Do not compress packets under the threshold
+		$targets = array_filter($players, function(Player $player) : bool{ return $player->isConnected(); });
+
+		if(!empty($targets)){
+			$pk = new BatchPacket();
+
+			foreach($packets as $p){
+				$pk->addPacket($p);
+			}
+
+			if(Network::$BATCH_THRESHOLD >= 0 and strlen($pk->payload) >= Network::$BATCH_THRESHOLD){
+				$pk->setCompressionLevel($this->networkCompressionLevel);
+			}else{
+				$pk->setCompressionLevel(0); //Do not compress packets under the threshold
 				$forceSync = true;
 			}
 
-			$promise = new CompressBatchPromise();
-			if(!$forceSync and $this->networkCompressionAsync){
-				$task = new CompressBatchTask($stream, $compressionLevel, $promise);
+			if(!$forceSync and !$immediate and $this->networkCompressionAsync){
+				$task = new CompressBatchedTask($pk, $targets);
 				$this->asyncPool->submitTask($task);
 			}else{
-				$promise->resolve(NetworkCompression::compress($stream->buffer, $compressionLevel));
+				$this->broadcastPacketsCallback($pk, $targets, $immediate);
 			}
+		}
 
-			return $promise;
-		}finally{
-			Timings::$playerNetworkSendCompressTimer->stopTiming();
+		Timings::$playerNetworkTimer->stopTiming();
+	}
+
+	/**
+	 * @param BatchPacket $pk
+	 * @param Player[]    $players
+	 * @param bool        $immediate
+	 */
+	public function broadcastPacketsCallback(BatchPacket $pk, array $players, bool $immediate = false){
+		if(!$pk->isEncoded){
+			$pk->encode();
+		}
+
+		foreach($players as $i){
+			$i->sendDataPacket($pk, false, $immediate);
 		}
 	}
+
 
 	/**
 	 * @param int $type
@@ -1980,7 +1946,10 @@ class Server{
 	public function checkConsole(){
 		Timings::$serverCommandTimer->startTiming();
 		while(($line = $this->console->getLine()) !== null){
-			$this->dispatchCommand($this->consoleSender, $line);
+			$this->pluginManager->callEvent($ev = new ServerCommandEvent($this->consoleSender, $line));
+			if(!$ev->isCancelled()){
+				$this->dispatchCommand($ev->getSender(), $ev->getCommand());
+			}
 		}
 		Timings::$serverCommandTimer->stopTiming();
 	}
@@ -1990,20 +1959,10 @@ class Server{
 	 *
 	 * @param CommandSender $sender
 	 * @param string        $commandLine
-	 * @param bool          $internal
 	 *
 	 * @return bool
 	 */
-	public function dispatchCommand(CommandSender $sender, string $commandLine, bool $internal = false) : bool{
-		if(!$internal){
-			$this->pluginManager->callEvent($ev = new CommandEvent($sender, $commandLine));
-			if($ev->isCancelled()){
-				return false;
-			}
-
-			$commandLine = $ev->getCommand();
-		}
-
+	public function dispatchCommand(CommandSender $sender, string $commandLine) : bool{
 		if($this->commandMap->dispatch($sender, $commandLine)){
 			return true;
 		}
@@ -2023,7 +1982,6 @@ class Server{
 
 		$this->pluginManager->disablePlugins();
 		$this->pluginManager->clearPlugins();
-		PermissionManager::getInstance()->clearPermissions();
 		$this->commandMap->clearCommands();
 
 		$this->logger->info("Reloading properties...");
@@ -2061,10 +2019,6 @@ class Server{
 	public function forceShutdown(){
 		if($this->hasStopped){
 			return;
-		}
-
-		if($this->doTitleTick){
-			echo "\x1b]0;\x07";
 		}
 
 		try{
@@ -2198,6 +2152,10 @@ class Server{
 	 * @param array|null $trace
 	 */
 	public function exceptionHandler(\Throwable $e, $trace = null){
+		if($e === null){
+			return;
+		}
+
 		global $lastError;
 
 		if($trace === null){
@@ -2255,7 +2213,7 @@ class Server{
 					}
 				}
 
-				if($dump->getData()["error"]["type"] === \ParseError::class){
+				if($dump->getData()["error"]["type"] === "E_PARSE" or $dump->getData()["error"]["type"] === "E_COMPILE_ERROR"){
 					$report = false;
 				}
 
@@ -2266,7 +2224,7 @@ class Server{
 
 				if($report){
 					$url = ($this->getProperty("auto-report.use-https", true) ? "https" : "http") . "://" . $this->getProperty("auto-report.host", "crash.pmmp.io") . "/submit/api";
-					$reply = Internet::postURL($url, [
+					$reply = Utils::postURL($url, [
 						"report" => "yes",
 						"name" => $this->getName() . " " . $this->getPocketMineVersion(),
 						"email" => "crash@pocketmine.net",
@@ -2387,15 +2345,15 @@ class Server{
 			$pk->entries[] = PlayerListEntry::createAdditionEntry($player->getUniqueId(), $player->getId(), $player->getDisplayName(), "", 0, $player->getSkin(), $player->getXuid());
 		}
 
-		$p->sendDataPacket($pk);
+		$p->dataPacket($pk);
 	}
 
-	private function checkTickUpdates(int $currentTick) : void{
-		if($this->alwaysTickPlayers){
-			foreach($this->players as $p){
-				if($p->spawned){
-					$p->onUpdate($currentTick);
-				}
+	private function checkTickUpdates(int $currentTick, float $tickTime) : void{
+		foreach($this->players as $p){
+			if(!$p->loggedIn and ($tickTime - $p->creationTime) >= 10){
+				$p->close("", "Login timeout");
+			}elseif($this->alwaysTickPlayers and $p->spawned){
+				$p->onUpdate($currentTick);
 			}
 		}
 
@@ -2466,10 +2424,10 @@ class Server{
 
 
 	/**
-	 * @return Language
+	 * @return BaseLang
 	 */
 	public function getLanguage(){
-		return $this->language;
+		return $this->baseLang;
 	}
 
 	/**
@@ -2551,7 +2509,12 @@ class Server{
 
 		++$this->tickCounter;
 
+		Timings::$connectionTimer->startTiming();
+		$this->network->processInterfaces();
+		Timings::$connectionTimer->stopTiming();
+
 		Timings::$schedulerTimer->startTiming();
+
 		$this->pluginManager->tickSchedulers($this->tickCounter);
 		Timings::$schedulerTimer->stopTiming();
 
@@ -2559,11 +2522,7 @@ class Server{
 		$this->asyncPool->collectTasks();
 		Timings::$schedulerAsyncTimer->stopTiming();
 
-		$this->checkTickUpdates($this->tickCounter);
-
-		Timings::$connectionTimer->startTiming();
-		$this->network->tick();
-		Timings::$connectionTimer->stopTiming();
+		$this->checkTickUpdates($this->tickCounter, $tickTime);
 
 		if(($this->tickCounter % 20) === 0){
 			if($this->doTitleTick){
