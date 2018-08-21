@@ -29,12 +29,17 @@ Apollo is a Minecraft: PE Server Software with an improved Generator and a lot m
  
 ## TODO :
 
-- recreate all banners @nikoskon2003
-- improve and add all feature of 1.2
-- redstone
-- mob ai
-- fix any bugs that are left
+- [ ] import old stuff and update it
 
+- [X] new banners
+
+- [ ] website 
+
+- [ ] add mob ai 
+
+- [ ] add all blocks and functions
+
+- [ ] add a improved generrator
  If you have epic ideas, create an issue and tell us the idea!
 
 ## Licensing information
