@@ -29,11 +29,13 @@ namespace pocketmine\network;
 use pocketmine\event\server\NetworkInterfaceCrashEvent;
 use pocketmine\event\server\NetworkInterfaceRegisterEvent;
 use pocketmine\event\server\NetworkInterfaceUnregisterEvent;
-use pocketmine\network\mcpe\NetworkSession;
 use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\Server;
 
 class Network{
+
+	public static $BATCH_THRESHOLD = 512;
+
 	/** @var Server */
 	private $server;
 
@@ -48,9 +50,6 @@ class Network{
 
 	/** @var string */
 	private $name;
-
-	/** @var NetworkSession[] */
-	private $updateSessions = [];
 
 	public function __construct(Server $server){
 		PacketPool::init();
@@ -84,28 +83,26 @@ class Network{
 		return $this->interfaces;
 	}
 
-	public function tick() : void{
+	public function processInterfaces() : void{
 		foreach($this->interfaces as $interface){
-			try{
-				$interface->tick();
-			}catch(\Exception $e){
-				$logger = $this->server->getLogger();
-				if(\pocketmine\DEBUG > 1){
-					$logger->logException($e);
-				}
-
-				$this->server->getPluginManager()->callEvent(new NetworkInterfaceCrashEvent($interface, $e));
-
-				$interface->emergencyShutdown();
-				$this->unregisterInterface($interface);
-				$logger->critical($this->server->getLanguage()->translateString("pocketmine.server.networkError", [get_class($interface), $e->getMessage()]));
-			}
+			$this->processInterface($interface);
 		}
+	}
 
-		foreach($this->updateSessions as $k => $session){
-			if(!$session->isConnected() or !$session->tick()){
-				unset($this->updateSessions[$k]);
+	public function processInterface(NetworkInterface $interface) : void{
+		try{
+			$interface->process();
+		}catch(\Throwable $e){
+			$logger = $this->server->getLogger();
+			if(\pocketmine\DEBUG > 1){
+				$logger->logException($e);
 			}
+
+			$this->server->getPluginManager()->callEvent(new NetworkInterfaceCrashEvent($interface, $e));
+
+			$interface->emergencyShutdown();
+			$this->unregisterInterface($interface);
+			$logger->critical($this->server->getLanguage()->translateString("pocketmine.server.networkError", [get_class($interface), $e->getMessage()]));
 		}
 	}
 
@@ -192,9 +189,5 @@ class Network{
 		foreach($this->advancedInterfaces as $interface){
 			$interface->unblockAddress($address);
 		}
-	}
-
-	public function scheduleSessionTick(NetworkSession $session) : void{
-		$this->updateSessions[spl_object_hash($session)] = $session;
 	}
 }
