@@ -1693,6 +1693,7 @@ class Server{
 			$this->pluginManager->registerInterface(ScriptPluginLoader::class);
 			if($this->devtoolsEnabled){
 				$this->pluginManager->registerInterface(FolderPluginLoader::class);
+				}
 
 			register_shutdown_function([$this, "crashDump"]);
 
