@@ -1687,9 +1687,9 @@ class Server{
 			$this->pluginManager = new PluginManager($this, $this->commandMap, ((bool) $this->getProperty("plugins.legacy-data-dir", true)) ? null : $this->getDataPath() . "plugin_data" . DIRECTORY_SEPARATOR);
 			$this->pluginManager->subscribeToPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this->consoleSender);
 			$this->profilingTickRate = (float) $this->getProperty("settings.profile-report-trigger", 20);
-		//	$this->pluginManager->registerInterface(new PharPluginLoader($this->autoloader));
+			$this->pluginManager->registerInterface(new PharPluginLoader($this->autoloader));
 			$this->pluginManager->registerInterface(new ScriptPluginLoader());
-			$this->pluginManager->registerInterface(PharPluginLoader::class);
+			//$this->pluginManager->registerInterface(PharPluginLoader::class);
 			$this->pluginManager->registerInterface(ScriptPluginLoader::class);
 			if($this->devtoolsEnabled){
 				$this->pluginManager->registerInterface(FolderPluginLoader::class);
@@ -2046,7 +2046,11 @@ class Server{
 		foreach($this->getIPBans()->getEntries() as $entry){
 			$this->getNetwork()->blockAddress($entry->getName(), -1);
 		}
-
+		$this->pluginManager->registerInterface(PharPluginLoader::class);
+		$this->pluginManager->registerInterface(ScriptPluginLoader::class);
+		if($this->devtoolsEnabled){
+			$this->pluginManager->registerInterface(FolderPluginLoader::class);
+		}
 		$this->pluginManager->registerInterface(new PharPluginLoader($this->autoloader));
 		$this->pluginManager->registerInterface(new ScriptPluginLoader());
 		$this->pluginManager->loadPlugins($this->pluginPath);
