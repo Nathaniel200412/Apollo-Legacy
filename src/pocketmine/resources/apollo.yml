@@ -4,7 +4,7 @@ settings:
 # Its a function under development
 devs:
   b-dev-tools:
-    enable: false
-    old-api-load: false
-  clean-entity: false
-map: false
+    enable: true
+    old-api-load: true
+  clean-entity: true
+map: true
