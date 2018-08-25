@@ -1441,12 +1441,36 @@ class Server{
 			}
 			$this->config = new Config($this->dataPath . "pocketmine.yml", Config::YAML, []);
 
-			$this->logger->info("Loading apollo.yml...");
-			if(!file_exists($this->dataPath . "apollo.yml")){
-				$content = file_get_contents(\pocketmine\RESOURCE_PATH . "apollo.yml");
-				@file_put_contents($this->dataPath . "apollo.yml", $content);
-			}
-			$this->blConfig = new Config($this->dataPath . "apollo.yml", Config::YAML);
+			$this->bluelightconfig = new Config($this->dataPath . "Apollo.properties", Config::PROPERTIES, [
+				"CleanEntity" => false,
+				"CrashDump" => true,
+				"DevTools" => true,
+				"KeepInventory" => false,
+				"MapEnabled" => false,
+				"WeatherEnabled" => true,
+				"WeatherRandomDurationMin" => 6000,
+				"WeatherRandomDurationMan" => 12000,
+				"LightningTime" => 6000,
+				"LightningFire" => false,
+				"LimitedCreative" => true,
+				"EntityAIEnabled" => true,
+				"RideableEntity" => true,
+				"OldAPIPluginLoad" => true,
+			]);
+			$this->cleanEntity = $this->getProperty("CleanEntity", false);
+			$this->crashdump = $this->getProperty("CrashDump", true);
+			$this->devtoolsEnabled = $this->getProperty("DevTools", true);
+			$this->keepInventory = $this->getProperty("KeepInventory", false);
+			$this->mapEnabled = $this->getProperty("MapEnabled", false);
+			$this->weatherEnabled = $this->getProperty("weatherEnabled", true);
+			$this->weatherRandomDurationMin = $this->getProperty("weatherRandomDurationMin", 6000);
+			$this->weatherRandomDurationMax = $this->getProperty("weatherRandomDurationMax", 12000);
+			$this->lightningTime = $this->getProperty("LightningTime", 200);
+			$this->lightningFire = $this->getProperty("LightningFire", false);
+			$this->limitedCreative = $this->getProperty("LimitedCreative", true);
+			$this->entityAIEnabled = $this->getProperty("EntityAIEnabled", true);
+			$this->rideableEntity = $this->getProperty("RideableEntity", true);
+			$this->oldApiPluginLoad = $this->getProperty("OldAPIPluginLoad", true);
 
 			define('pocketmine\DEBUG', (int) $this->getProperty("debug.level", 1));
 
