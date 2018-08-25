@@ -24,12 +24,16 @@ declare(strict_types=1);
 namespace pocketmine\network\mcpe;
 
 use pocketmine\level\format\Chunk;
+use pocketmine\level\Level;
+use pocketmine\network\mcpe\protocol\BatchPacket;
 use pocketmine\network\mcpe\protocol\FullChunkDataPacket;
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\Server;
 use pocketmine\tile\Spawnable;
 
 class ChunkRequestTask extends AsyncTask{
+	/** @var int */
+	protected $levelId;
 	/** @var string */
 	protected $chunk;
 	/** @var int */
@@ -41,8 +45,9 @@ class ChunkRequestTask extends AsyncTask{
 	/** @var int */
 	protected $compressionLevel;
 
-	public function __construct(int $chunkX, int $chunkZ, Chunk $chunk, CompressBatchPromise $promise){
-		$this->compressionLevel = NetworkCompression::$LEVEL;
+	public function __construct(Level $level, int $chunkX, int $chunkZ, Chunk $chunk){
+		$this->levelId = $level->getId();
+		$this->compressionLevel = $level->getServer()->networkCompressionLevel;
 
 		$this->chunk = $chunk->fastSerialize();
 		$this->chunkX = $chunkX;
@@ -57,8 +62,6 @@ class ChunkRequestTask extends AsyncTask{
 		}
 
 		$this->tiles = $tiles;
-
-		$this->storeLocal($promise);
 	}
 
 	public function onRun() : void{
@@ -69,15 +72,27 @@ class ChunkRequestTask extends AsyncTask{
 		$pk->chunkZ = $this->chunkZ;
 		$pk->data = $chunk->networkSerialize() . $this->tiles;
 
-		$stream = new PacketStream();
-		$stream->putPacket($pk);
+		$batch = new BatchPacket();
+		$batch->addPacket($pk);
+		$batch->setCompressionLevel($this->compressionLevel);
+		$batch->encode();
 
-		$this->setResult(NetworkCompression::compress($stream->buffer, $this->compressionLevel), false);
+		$this->setResult($batch->buffer, false);
 	}
 
 	public function onCompletion(Server $server) : void{
-		/** @var CompressBatchPromise $promise */
-		$promise = $this->fetchLocal();
-		$promise->resolve($this->getResult());
+		$level = $server->getLevel($this->levelId);
+		if($level instanceof Level){
+			if($this->hasResult()){
+				$batch = new BatchPacket($this->getResult());
+				assert(strlen($batch->buffer) > 0);
+				$batch->isEncoded = true;
+				$level->chunkRequestCallback($this->chunkX, $this->chunkZ, $batch);
+			}else{
+				$server->getLogger()->error("Chunk request for level #" . $this->levelId . ", x=" . $this->chunkX . ", z=" . $this->chunkZ . " doesn't have any result data");
+			}
+		}else{
+			$server->getLogger()->debug("Dropped chunk task due to level not loaded");
+		}
 	}
 }
