@@ -120,6 +120,22 @@ class Server{
 
 	/** @var SleeperHandler */
 	private $tickSleeper;
+	
+	//apollo properties
+    public $cleanEntity;
+	public $crashdump;
+	public $devtoolsEnabled = false;
+	public $keepInventory = false;
+	public $mapEnabled = false;
+	public $weatherEnabled = true;
+ 	public $weatherRandomDurationMin = 6000;
+ 	public $weatherRandomDurationMax = 12000;
+	public $lightningTime = 200;
+	public $lightningFire = false;
+	public $limitedCreative = true;
+	public $entityAIEnabled = true;
+	public $rideableEntity = true;
+	public $oldApiPluginLoad = true;
 
 	/** @var BanList */
 	private $banByName = null;
