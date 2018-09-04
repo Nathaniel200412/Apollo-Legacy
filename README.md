@@ -2,7 +2,6 @@
 
 Apollo is a Minecraft: PE Server Software with an improved Generator and a lot more features.
 
-![Apollo Rocket](https://media.giphy.com/media/3XERxMrwRx6E1KCrqh/giphy.gif)
 
 **CircleCI Build Status** [![CircleCI](https://circleci.com/ghApolloBE/Apollo-Legacy.svg?style=svg)](https://circleci.com/gh/ApolloBE/Apollo-Legacy)
 
