@@ -24,6 +24,8 @@ Apollo is a Minecraft: PE Server Software with an improved Generator and a lot m
 
 - pmmp
 
+- TuranicTeam / Altay
+
 - all other poeple
  
 ## TODO :
