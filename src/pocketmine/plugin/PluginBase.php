@@ -195,7 +195,7 @@ abstract class PluginBase implements Plugin{
 	 * Saves an embedded resource to its relative location in the data folder
 	 *
 	 * @param string $filename
-	 * @param bool $replace
+	 * @param bool   $replace
 	 *
 	 * @return bool
 	 */
@@ -254,9 +254,8 @@ abstract class PluginBase implements Plugin{
 	}
 
 	public function saveConfig(){
-		if(!$this->getConfig()->save()){
-			$this->getLogger()->critical("Could not save config to " . $this->configFile);
-		}
+		$this->getConfig()->save();
+
 	}
 
 	public function saveDefaultConfig() : bool{
@@ -267,14 +266,9 @@ abstract class PluginBase implements Plugin{
 	}
 
 	public function reloadConfig(){
-		if(!$this->saveDefaultConfig()){
-			@mkdir($this->dataFolder);
-		}
+		$this->saveDefaultConfig();
 		$this->config = new Config($this->configFile);
-		if(($configStream = $this->getResource("config.yml")) !== null){
-			$this->config->setDefaults(yaml_parse(Config::fixYAMLIndexes(stream_get_contents($configStream))));
-			fclose($configStream);
-		}
+
 	}
 
 	/**

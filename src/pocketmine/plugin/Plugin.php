@@ -89,4 +89,5 @@ interface Plugin extends CommandExecutor{
 	 * @return TaskScheduler
 	 */
 	public function getScheduler() : TaskScheduler;
+
 }
