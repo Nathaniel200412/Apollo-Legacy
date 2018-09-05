@@ -24,7 +24,7 @@ jobs:
           name: Install DevTools
           command: |
             mkdir plugins
-            bin/php7/bin/php -dphar.readonly=0 tests/plugins/PocketMine-DevTools/src/DevTools/ConsoleScript.php --make tests/plugins/PocketMine-DevTools --relative tests/plugins/PocketMine-DevTools --out plugins/DevTools.phar
+         #   bin/php7/bin/php -dphar.readonly=0 tests/plugins/PocketMine-DevTools/src/DevTools/ConsoleScript.php --make tests/plugins/PocketMine-DevTools --relative tests/plugins/PocketMine-DevTools --out plugins/DevTools.phar
       - run:
           name: Composer install
           command: bin/php7/bin/php bin/composer.phar install
