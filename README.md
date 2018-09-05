@@ -34,11 +34,11 @@ Apollo is a Minecraft: PE Server Software with an improved Generator and a lot m
 
 - [X] new banners
 
-- [ ] website 
+- [X] website 
 
-- [ ] add mob ai 
+- [X] add mob ai 
 
-- [ ] add all blocks and functions
+- [X] add all blocks and functions
 
 - [ ] add a improved generrator
 
