@@ -1,23 +1,24 @@
 <?php
 
 /*
- *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
- * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ *               _ _
+ *         /\   | | |
+ *        /  \  | | |_ __ _ _   _
+ *       / /\ \ | | __/ _` | | | |
+ *      / ____ \| | || (_| | |_| |
+ *     /_/    \_|_|\__\__,_|\__, |
+ *                           __/ |
+ *                          |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @author TuranicTeam
+ * @link https://github.com/TuranicTeam/Altay
  *
- *
-*/
+ */
 
 declare(strict_types=1);
 
@@ -151,6 +152,50 @@ interface LevelProvider{
 	 * @param int $difficulty
 	 */
 	public function setDifficulty(int $difficulty);
+
+	/**
+	 * Returns the time in ticks to the next rain level change.
+	 * @return int
+	 */
+	public function getRainTime() : int;
+
+	/**
+	 * Sets the time in ticks to the next rain level change.
+	 * @param int $ticks
+	 */
+	public function setRainTime(int $ticks) : void;
+
+	/**
+	 * @return float 0.0 - 1.0
+	 */
+	public function getRainLevel() : float;
+
+	/**
+	 * @param float $level 0.0 - 1.0
+	 */
+	public function setRainLevel(float $level) : void;
+
+	/**
+	 * Returns the time in ticks to the next lightning level change.
+	 * @return int
+	 */
+	public function getLightningTime() : int;
+
+	/**
+	 * Sets the time in ticks to the next lightning level change.
+	 * @param int $ticks
+	 */
+	public function setLightningTime(int $ticks) : void;
+
+	/**
+	 * @return float 0.0 - 1.0
+	 */
+	public function getLightningLevel() : float;
+
+	/**
+	 * @param float $level 0.0 - 1.0
+	 */
+	public function setLightningLevel(float $level) : void;
 
 	/**
 	 * Performs garbage collection in the level provider, such as cleaning up regions in Region-based worlds.
