@@ -16,7 +16,7 @@ use pocketmine\entity\utils\Bossbar;
 use pocketmine\event\HandlerList;
 use pocketmine\event\level\LevelLoadEvent;
 use pocketmine\event\level\LevelInitEvent;
-use pocketmine\event\player\PlayerDataSaveEvent;
+use pocketmine\event\player\PlayerDataSaveEvent; //DIRECTORY_SEPARATOR
 use pocketmine\event\server\CommandEvent;
 use pocketmine\event\server\DataPacketBroadcastEvent;
 use pocketmine\event\server\QueryRegenerateEvent;
@@ -1515,8 +1515,8 @@ class Server{
 				mkdir($pluginPath, 0777);
 			}
 
-			if(!file_exists($pluginPath . "Altay/")){
-				mkdir($pluginPath . "Altay/", 0777);
+			if(!file_exists($pluginPath . "Apollo/")){
+				mkdir($pluginPath . "Apollo/", 0777);
 			}
 
 			$this->dataPath = realpath($dataPath) . DIRECTORY_SEPARATOR;
@@ -2788,7 +2788,7 @@ class Server{
 		$this->currentTPS = min(20, 1 / max(0.001, $now - $tickTime));
 		$this->currentUse = min(1, ($now - $tickTime) / 0.05);
 
-		TimingsHandler::tick($this->currentTPS <= $this->profilingTickRate);
+		TimingsHandler::tick($this->currentTPS <= $this->profilingTickRate); //getPluginPath
 
 		array_shift($this->tickAverage);
 		$this->tickAverage[] = $this->currentTPS;
