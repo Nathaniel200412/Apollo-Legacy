@@ -25,24 +25,23 @@ namespace pocketmine\network\mcpe\protocol;
 
 #include <rules/DataPacket.h>
 
-
 use pocketmine\network\mcpe\handler\SessionHandler;
 
-class HurtArmorPacket extends DataPacket{
-    public const NETWORK_ID = ProtocolInfo::HURT_ARMOR_PACKET;
+class NetworkStackLatencyPacket extends DataPacket{
+	public const NETWORK_ID = ProtocolInfo::NETWORK_STACK_LATENCY_PACKET;
 
-    /** @var int */
-    public $health;
+	/** @var int */
+	public $timestamp;
 
-    protected function decodePayload() : void{
-        $this->health = $this->getVarInt();
-    }
+	protected function decodePayload() : void{
+		$this->timestamp = $this->getLLong();
+	}
 
-    protected function encodePayload() : void{
-        $this->putVarInt($this->health);
-    }
+	protected function encodePayload() : void{
+		$this->putLLong($this->timestamp);
+	}
 
-    public function handle(SessionHandler $handler) : bool{
-        return $handler->handleHurtArmor($this);
-    }
+	public function handle(SessionHandler $session) : bool{
+		return $session->handleNetworkStackLatency($this);
+	}
 }

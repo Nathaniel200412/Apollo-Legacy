@@ -21,28 +21,14 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\network\mcpe\protocol;
+namespace pocketmine\network\mcpe\protocol\types;
 
-#include <rules/DataPacket.h>
+use pocketmine\utils\UUID;
 
+class ScoreboardIdentityPacketEntry{
+	/** @var int */
+	public $scoreboardId;
+	/** @var UUID|null */
+	public $uuid;
 
-use pocketmine\network\mcpe\handler\SessionHandler;
-
-class HurtArmorPacket extends DataPacket{
-    public const NETWORK_ID = ProtocolInfo::HURT_ARMOR_PACKET;
-
-    /** @var int */
-    public $health;
-
-    protected function decodePayload() : void{
-        $this->health = $this->getVarInt();
-    }
-
-    protected function encodePayload() : void{
-        $this->putVarInt($this->health);
-    }
-
-    public function handle(SessionHandler $handler) : bool{
-        return $handler->handleHurtArmor($this);
-    }
 }

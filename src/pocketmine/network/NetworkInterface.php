@@ -26,8 +26,7 @@ declare(strict_types=1);
  */
 namespace pocketmine\network;
 
-use pocketmine\network\mcpe\protocol\DataPacket;
-use pocketmine\Player;
+use pocketmine\network\mcpe\NetworkSession;
 
 /**
  * Network interfaces are transport layers which can be used to transmit packets between the server and clients.
@@ -42,22 +41,19 @@ interface NetworkInterface{
 	/**
 	 * Sends a DataPacket to the interface, returns an unique identifier for the packet if $needACK is true
 	 *
-	 * @param Player     $player
-	 * @param DataPacket $packet
-	 * @param bool       $needACK
-	 * @param bool       $immediate
-	 *
-	 * @return int|null
+	 * @param NetworkSession $session
+	 * @param string $payload
+	 * @param bool $immediate
 	 */
-	public function putPacket(Player $player, DataPacket $packet, bool $needACK = false, bool $immediate = true) : ?int;
+	public function putPacket(NetworkSession $session, string $payload, bool $immediate = true) : void;
 
 	/**
 	 * Terminates the connection
 	 *
-	 * @param Player $player
+	 * @param NetworkSession $session
 	 * @param string $reason
 	 */
-	public function close(Player $player, string $reason = "unknown reason") : void;
+	public function close(NetworkSession $session, string $reason = "unknown reason") : void;
 
 	/**
 	 * @param string $name
@@ -67,7 +63,7 @@ interface NetworkInterface{
 	/**
 	 * Called every tick to process events on the interface.
 	 */
-	public function process() : void;
+	public function tick() : void;
 
 	/**
 	 * Gracefully shuts down the network interface.
