@@ -5,6 +5,6 @@ settings:
 devs:
   b-dev-tools:
     enable: true
-    old-api-load: true
+    load-incompatible-api: true
   clean-entity: true
 map: true
