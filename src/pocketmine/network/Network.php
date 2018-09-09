@@ -113,14 +113,14 @@ class Network{
 	}
 
 	/**
-	 * @param NetworkInterface $interface
+	 * @param SourceInterface $interface
 	 */
-	public function registerInterface(NetworkInterface $interface) : void{
+	public function registerInterface(SourceInterface $interface){
 		$this->server->getPluginManager()->callEvent($ev = new NetworkInterfaceRegisterEvent($interface));
 		if(!$ev->isCancelled()){
 			$interface->start();
 			$this->interfaces[$hash = spl_object_hash($interface)] = $interface;
-			if($interface instanceof AdvancedNetworkInterface){
+			if($interface instanceof AdvancedSourceInterface){
 				$this->advancedInterfaces[$hash] = $interface;
 				$interface->setNetwork($this);
 			}
