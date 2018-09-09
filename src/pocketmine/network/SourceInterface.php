@@ -67,7 +67,7 @@ interface SourceInterface{
 	/**
 	 * @return bool
 	 */
-	public function process() : bool;
+	public function process() : void;
 
 	public function shutdown();
 
