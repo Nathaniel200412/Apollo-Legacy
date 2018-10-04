@@ -326,7 +326,7 @@ class Vector3{
 	 * @param $y
 	 * @param $z
 	 *
-	 * @return $this
+	 * @return Vector3
 	 */
 	public function setComponents($x, $y, $z){
 		$this->x = $x;
