@@ -1741,7 +1741,7 @@ class Server{
 			$this->consoleSender = new ConsoleCommandSender();
 			$this->commandMap = new SimpleCommandMap($this);
 
-			Generator::init();
+			//Generator::init();
 			Entity::init();
 			Tile::init();
 			BlockFactory::init();
