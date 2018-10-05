@@ -25,6 +25,7 @@ namespace pocketmine\level\generator\biome;
 
 use pocketmine\block\Block;
 use pocketmine\level\ChunkManager;
+use pocketmine\level\generator\normal\biome\UnknownBiome;
 use pocketmine\level\generator\normal\biome\DesertBiome;
 use pocketmine\level\generator\normal\biome\ForestBiome;
 use pocketmine\level\generator\normal\biome\IcePlainsBiome;
@@ -43,7 +44,7 @@ use net\daporkchop\world\biome\SavannaBiome;
 use net\daporkchop\world\biome\JungleBiome;
 use pocketmine\level\generator\normal\biome\DeepOceanBiome;
 use net\daporkchop\world\biome\SavannaMBiome;
-use pocketmine\level\generator\normal\biome\BeachBiome;
+use pocketmine\level\generator\normal\biome\BeachBiome;//
 
 abstract class Biome{
 
