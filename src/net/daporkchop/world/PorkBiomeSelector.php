@@ -15,7 +15,7 @@ class PorkBiomeSelector extends BiomeSelector   {
         $this->fallback = $fallback;
     }
     
-    public function recalculate(){
+	public function recalculate() : void{
         
     }
     
@@ -45,7 +45,7 @@ class PorkBiomeSelector extends BiomeSelector   {
             } elseif ($temperature > 0.6)   {
                 if ($rainfall > 0.5){
                     if ($rainfall > 0.75){
-                        $biomeId = Biome::BIRCH_FOREST;
+                        $biomeId = Biome::BIRCH_FOREST; //recalculate
                     } else {
                         $biomeId = Biome::FOREST;
                     }
