@@ -25,7 +25,7 @@ namespace pocketmine\level\generator\biome;
 
 use pocketmine\block\Block;
 use pocketmine\level\ChunkManager;
-//use pocketmine\level\generator\normal\biome\UnknownBiome;
+use pocketmine\level\biome\UnknownBiome;
 use pocketmine\level\generator\normal\biome\DesertBiome;
 use pocketmine\level\generator\normal\biome\ForestBiome;
 use pocketmine\level\generator\normal\biome\IcePlainsBiome;
@@ -130,17 +130,20 @@ abstract class Biome{
 	 * @return Biome
 	 */
 	public static function getBiome(int $id) : Biome{
-		return self::$biomes[$id] ?? self::$biomes[self::OCEAN];
+		if(self::$biomes[$id] === null){
+			self::register($id, new UnknownBiome());
+		}
+		return self::$biomes[$id];
 	}
 	
-	public function clearPopulators(){
+		public function clearPopulators(){
 		$this->populators = [];
 	}
 	
 	public function addPopulator(Populator $populator){
 		$this->populators[] = $populator;
-		
 	}
+
 
 	/**
 	 * @param ChunkManager $level
