@@ -101,7 +101,7 @@ abstract class Biome{
 	}
 
 	public static function init(){
-		self::$biomes = new \SplFixedArray(self::MAX_BIOMES);
+	//	self::$biomes = new \SplFixedArray(self::MAX_BIOMES);//getBiome
 		self::register(self::OCEAN, new OceanBiome());
 		self::register(self::PLAINS, new PlainBiome());
 		self::register(self::DESERT, new DesertBiome());
@@ -130,18 +130,16 @@ abstract class Biome{
 	 * @return Biome
 	 */
 	public static function getBiome(int $id) : Biome{
-		if(self::$biomes[$id] === null){
-	//		self::register($id, new UnknownBiome());
-		}
-		return self::$biomes[$id];
+		return self::$biomes[$id] ?? self::$biomes[self::OCEAN];
 	}
-
+	
 	public function clearPopulators(){
 		$this->populators = [];
 	}
-
+	
 	public function addPopulator(Populator $populator){
 		$this->populators[] = $populator;
+		
 	}
 
 	/**
