@@ -44,7 +44,7 @@ final class GeneratorManager{
 		self::addGenerator(Nether::class, "nether");
 		self::addGenerator(End::class, "ender");
 		self::addGenerator(End::class, "end");
-		self::addGenerator(VoidGenerator::class, "void");
+		//self::addGenerator(VoidGenerator::class, "void");
 
 		self::addGenerator(PorkWorld::class, "testing"); //not tested and maby not stable
 	}
