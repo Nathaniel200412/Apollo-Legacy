@@ -69,7 +69,9 @@ abstract class BiomeSelector{
 
 		for($i = 0; $i < 64; ++$i){
 			for($j = 0; $j < 64; ++$j){
-				$biome = Biome::getBiome($this->lookup($i / 63, $j / 63));
+				$this->map[$i + ($j << 6)] = call_user_func($this->lookup, $i / 63, $j / 63);
+				
+		//		$biome = Biome::getBiome($this->lookup($i / 63, $j / 63));
 				if($biome instanceof UnknownBiome){
 					throw new \RuntimeException("Unknown biome returned by selector with ID " . $biome->getId());
 				}
@@ -77,6 +79,14 @@ abstract class BiomeSelector{
 			}
 		}
 	}
+			//	$biome = Biome::getBiome($this->lookup($i / 63, $j / 63));
+			//	if($biome instanceof UnknownBiome){
+			//		throw new \RuntimeException("Unknown biome returned by selector with ID " . $biome->getId());
+			//	}
+		//		$this->map[$i + ($j << 6)] = $biome;
+		//	}
+	//	}
+	//}
 
 	public function getTemperature($x, $z){
 		return ($this->temperature->noise2D($x, $z, true) + 1) / 2;
