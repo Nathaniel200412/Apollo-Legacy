@@ -25,7 +25,6 @@ namespace pocketmine\level\generator\biome;
 
 use pocketmine\block\Block;
 use pocketmine\level\ChunkManager;
-use pocketmine\level\biome\UnknownBiome;
 use pocketmine\level\generator\normal\biome\DesertBiome;
 use pocketmine\level\generator\normal\biome\ForestBiome;
 use pocketmine\level\generator\normal\biome\IcePlainsBiome;
@@ -44,7 +43,7 @@ use net\daporkchop\world\biome\SavannaBiome;
 use net\daporkchop\world\biome\JungleBiome;
 use pocketmine\level\generator\normal\biome\DeepOceanBiome;
 use net\daporkchop\world\biome\SavannaMBiome;
-use pocketmine\level\generator\normal\biome\BeachBiome;//
+use pocketmine\level\generator\normal\biome\BeachBiome;
 
 abstract class Biome{
 
@@ -56,9 +55,15 @@ abstract class Biome{
 	public const TAIGA = 5;//
 	public const SWAMP = 6;//
 	public const RIVER = 7;//
+
 	public const HELL = 8;
+
 	public const ICE_PLAINS = 12;//
+
+
 	public const SMALL_MOUNTAINS = 20;//
+
+
 	public const BIRCH_FOREST = 27;//
 	
 	//Pork's biomes
@@ -69,10 +74,11 @@ abstract class Biome{
 	public const DEEP_OCEAN = 24;//
 	public const SAVANNA_M = 163;//
 	public const BEACH = 16;//
+
 	public const MAX_BIOMES = 256;
 
-	/** @var Biome[]|\SplFixedArray */
-	private static $biomes;
+	/** @var Biome[] */
+	private static $biomes = [];
 
 	/** @var int */
 	private $id;
@@ -101,7 +107,6 @@ abstract class Biome{
 	}
 
 	public static function init(){
-	//	self::$biomes = new \SplFixedArray(self::MAX_BIOMES);//getBiome
 		self::register(self::OCEAN, new OceanBiome());
 		self::register(self::PLAINS, new PlainBiome());
 		self::register(self::DESERT, new DesertBiome());
@@ -110,7 +115,10 @@ abstract class Biome{
 		self::register(self::TAIGA, new TaigaBiome());
 		self::register(self::SWAMP, new SwampBiome());
 		self::register(self::RIVER, new RiverBiome());
+
 		self::register(self::ICE_PLAINS, new IcePlainsBiome());
+
+
 		self::register(self::SMALL_MOUNTAINS, new SmallMountainsBiome());
 		
 		self::register(self::MESA, new MesaNormalBiome());
@@ -130,20 +138,16 @@ abstract class Biome{
 	 * @return Biome
 	 */
 	public static function getBiome(int $id) : Biome{
-		if(self::$biomes[$id] === null){
-			self::register($id, new UnknownBiome());
-		}
-		return self::$biomes[$id];
+		return self::$biomes[$id] ?? self::$biomes[self::OCEAN];
 	}
-	
-		public function clearPopulators(){
+
+	public function clearPopulators(){
 		$this->populators = [];
 	}
-	
+
 	public function addPopulator(Populator $populator){
 		$this->populators[] = $populator;
 	}
-
 
 	/**
 	 * @param ChunkManager $level
