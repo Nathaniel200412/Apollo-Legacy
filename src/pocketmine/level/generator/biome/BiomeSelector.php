@@ -24,22 +24,34 @@ declare(strict_types=1);
 namespace pocketmine\level\generator\biome;
 
 use pocketmine\level\biome\Biome;
-use pocketmine\level\generator\normal\biome\UnknownBiome;
+use pocketmine\level\biome\UnknownBiome;
 use pocketmine\level\generator\noise\Simplex;
 use pocketmine\utils\Random;
 
 abstract class BiomeSelector{
+
+	/** @var Biome */
+	private $fallback;
+
 	/** @var Simplex */
 	private $temperature;
 	/** @var Simplex */
 	private $rainfall;
 
-	/** @var Biome[]|\SplFixedArray */
+	/** @var Biome[] */
+	private $biomes = [];
+
+	/** @var \SplFixedArray */
 	private $map = null;
 
-	public function __construct(Random $random){
-		$this->temperature = new Simplex($random, 2, 1 / 16, 1 / 512);
-		$this->rainfall = new Simplex($random, 2, 1 / 16, 1 / 512);
+	/** @var callable */
+	private $lookup;
+	
+		public function __construct(Random $random, callable $lookup, Biome $fallback){
+		$this->fallback = $fallback;
+		$this->lookup = $lookup;
+		$this->temperature = new Simplex($random, 8, 1 / 16, 1 / 4096);
+		$this->rainfall = new Simplex($random, 8, 1 / 16, 1 / 1024);
 	}
 
 	/**
