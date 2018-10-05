@@ -21,7 +21,7 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\level\biome;
+namespace pocketmine\level\generator\biome;
 
 use pocketmine\block\Block;
 use pocketmine\level\ChunkManager;
