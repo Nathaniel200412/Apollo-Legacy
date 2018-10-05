@@ -21,7 +21,7 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\level\generator\biome;
+namespace pocketmine\level\biome;
 
 use pocketmine\block\Block;
 use pocketmine\level\ChunkManager;
@@ -55,15 +55,9 @@ abstract class Biome{
 	public const TAIGA = 5;//
 	public const SWAMP = 6;//
 	public const RIVER = 7;//
-
 	public const HELL = 8;
-
 	public const ICE_PLAINS = 12;//
-
-
 	public const SMALL_MOUNTAINS = 20;//
-
-
 	public const BIRCH_FOREST = 27;//
 	
 	//Pork's biomes
@@ -74,11 +68,10 @@ abstract class Biome{
 	public const DEEP_OCEAN = 24;//
 	public const SAVANNA_M = 163;//
 	public const BEACH = 16;//
-
 	public const MAX_BIOMES = 256;
 
-	/** @var Biome[] */
-	private static $biomes = [];
+	/** @var Biome[]|\SplFixedArray */
+	private static $biomes;
 
 	/** @var int */
 	private $id;
@@ -107,6 +100,7 @@ abstract class Biome{
 	}
 
 	public static function init(){
+		self::$biomes = new \SplFixedArray(self::MAX_BIOMES);
 		self::register(self::OCEAN, new OceanBiome());
 		self::register(self::PLAINS, new PlainBiome());
 		self::register(self::DESERT, new DesertBiome());
@@ -115,10 +109,7 @@ abstract class Biome{
 		self::register(self::TAIGA, new TaigaBiome());
 		self::register(self::SWAMP, new SwampBiome());
 		self::register(self::RIVER, new RiverBiome());
-
 		self::register(self::ICE_PLAINS, new IcePlainsBiome());
-
-
 		self::register(self::SMALL_MOUNTAINS, new SmallMountainsBiome());
 		
 		self::register(self::MESA, new MesaNormalBiome());
@@ -138,7 +129,10 @@ abstract class Biome{
 	 * @return Biome
 	 */
 	public static function getBiome(int $id) : Biome{
-		return self::$biomes[$id] ?? self::$biomes[self::OCEAN];
+		if(self::$biomes[$id] === null){
+			self::register($id, new UnknownBiome());
+		}
+		return self::$biomes[$id];
 	}
 
 	public function clearPopulators(){
