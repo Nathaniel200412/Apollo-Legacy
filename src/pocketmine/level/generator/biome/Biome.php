@@ -25,7 +25,7 @@ namespace pocketmine\level\generator\biome;
 
 use pocketmine\block\Block;
 use pocketmine\level\ChunkManager;
-use pocketmine\level\generator\normal\biome\UnknownBiome;
+//use pocketmine\level\generator\normal\biome\UnknownBiome;
 use pocketmine\level\generator\normal\biome\DesertBiome;
 use pocketmine\level\generator\normal\biome\ForestBiome;
 use pocketmine\level\generator\normal\biome\IcePlainsBiome;
@@ -131,7 +131,7 @@ abstract class Biome{
 	 */
 	public static function getBiome(int $id) : Biome{
 		if(self::$biomes[$id] === null){
-			self::register($id, new UnknownBiome());
+	//		self::register($id, new UnknownBiome());
 		}
 		return self::$biomes[$id];
 	}
