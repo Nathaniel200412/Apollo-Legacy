@@ -13,11 +13,33 @@ class PorkBiomeSelector extends BiomeSelector   {
         parent::__construct($random, function($temp, $rain) {}, $fallback);
         
         $this->fallback = $fallback;
+		$this->lookup = $lookup;
+		
     }
-    
-	public function recalculate() : void{ //lookup
-        
-    }
+
+	/**
+	 * Lookup function called by recalculate() to determine the biome to use for this temperature and rainfall.
+	 *
+	 * @param float $temperature
+	 * @param float $rainfall
+	 *
+	 * @return int biome ID 0-255
+	 */
+	abstract protected function lookup(float $temperature, float $rainfall) : int;
+	public function recalculate() : void{
+		$this->map = new \SplFixedArray(64 * 64);
+		for($i = 0; $i < 64; ++$i){
+			for($j = 0; $j < 64; ++$j){
+				$this->map[$i + ($j << 6)] = call_user_func($this->lookup, $i / 63, $j / 63);
+				
+		//		$biome = Biome::getBiome($this->lookup($i / 63, $j / 63));
+				if($biome instanceof UnknownBiome){
+					throw new \RuntimeException("Unknown biome returned by selector with ID " . $biome->getId());
+				}
+				$this->map[$i + ($j << 6)] = $biome;
+			}
+		}
+	}
     
     public function pickBiomeNew($x, $z, $height){
         $temperature = $this->getTemperature($x, $z);
